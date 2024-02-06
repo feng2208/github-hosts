@@ -1,5 +1,5 @@
 # github-hosts
-加速github。
+加速github。(https://github.com/glue208/github-hosts)
 
 ## 谷歌浏览器
 从命令行启动：

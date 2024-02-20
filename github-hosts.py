@@ -1,5 +1,6 @@
 # ./mitmdump -s ./github-hosts.py -p 8080
 # ./mitmdump -s ./github-hosts.py -p 8080 --set dianxin=true
+# https://github.com/glue208/github-hosts
 
 # sni, sni_dx, ip, ip_dx, port, port_dx: 'xxx_dx' overwrite 'xxx' when '--set dianxian=true'
 # ssl_verify, ssl_verify_dx: default to "yes"

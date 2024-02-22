@@ -1,5 +1,5 @@
 # github-hosts
-[加速github](https://github.com/glue208/github-hosts)([mirror](https://github-hosts.onrender.com/))。
+[加速github](https://github.com/feng2208/github-hosts)([mirror](https://github-hosts.onrender.com/))。
 
 ## 谷歌浏览器
 从命令行启动：
@@ -15,7 +15,7 @@
 
 ## mitmproxy代理
 安装[mitmproxy](https://www.mitmproxy.org/)，
-下载[github-hosts.py](https://raw.githubusercontent.com/glue208/github-hosts/main/github-hosts.py)([mirror](https://github-hosts.onrender.com/raw/github-hosts.py))到`D:\mitm\`。
+下载[github-hosts.py](https://raw.githubusercontent.com/feng2208/github-hosts/main/github-hosts.py)([mirror](https://github-hosts.onrender.com/raw/github-hosts.py))到`D:\mitm\`。
 
 运行`mitmdump`，电信网络在后面加上：`--set dianxin=true`
 ```bat

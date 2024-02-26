@@ -1,6 +1,8 @@
 # github-hosts
 [加速github](https://github.com/feng2208/github-hosts)([mirror](https://github-hosts.onrender.com/))。
 
+相关说明(https://feng2208.onrender.com/posts/github-speed-up.html)
+
 ## 谷歌浏览器
 从命令行启动：
 ```bat

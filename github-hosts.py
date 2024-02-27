@@ -2,12 +2,15 @@
 # ./mitmdump -s ./github-hosts.py -p 8080 --set dianxin=true
 # https://github.com/feng2208/github-hosts
 
-# sni, sni_dx, ip, ip_dx, port, port_dx: 'xxx_dx' overwrite 'xxx' when '--set dianxian=true'
+### 'xxx_dx' overwrite 'xxx' when '--set dianxian=true'
+# sni, sni_dx
+# ip, ip_dx
+# port, port_dx
 # ssl_verify, ssl_verify_dx: default to "yes"
 
 github_hosts = {
   "mappings": [
-    {
+    { # github
       "patterns": [
         "github.com",
       ],
@@ -32,7 +35,6 @@ from dataclasses import dataclass
 from mitmproxy.addonmanager import Loader
 from mitmproxy.http import HTTPFlow
 from mitmproxy import tls
-from mitmproxy.proxy.server_hooks import ServerConnectionHookData
 from mitmproxy import ctx
 
 from OpenSSL import SSL
@@ -82,40 +84,29 @@ class GithubHosts(TlsConfig):
 
     def tls_clienthello(self, data: tls.ClientHelloData) -> None:
         data.ignore_connection = True
-        if self._get_sni(data.context.server.address[0]) is not None:
-            data.ignore_connection = False
 
-    def server_connect(self, data: ServerConnectionHookData) -> None:
-        mapping = self._get_sni(data.server.address[0])
+        _host = data.context.server.address[0]
+        _port = data.context.server.address[1]
+        logging.info(f"tls-server-host: {_host}")
+        mapping = self._get_sni(_host)
         if mapping is not None:
-            logging.info(f"xxxxxxx--server-host: {data.server.address[0]}")
-            if data.server.tls:
-                if mapping.ip is not None:
-                    data.server.sni = mapping.sni
-                logging.info(f"xxxxxxx--server-sni: {data.server.sni}")
-            logging.info(f"xxxxxxx--server-address: {data.server.address}")
+            if mapping.sni is not None:
+                data.ignore_connection = False
+                data.context.server.sni = mapping.sni
+                _host = mapping.sni
+            if mapping.ip is not None:
+                _host = mapping.ip
+            if mapping.port is not None:
+                _port = mapping.port
+            data.context.server.address = (_host, _port)
+            logging.info(f"tls-server-sni: {data.context.server.sni}")
+            logging.info(f"tls-server-address: {data.context.server.address}")
 
     def tls_start_server(self, tls_start: tls.TlsData) -> None:
         super().tls_start_server(tls_start)
         if tls_start.conn.sni in self.ssl_no_verify_hosts:
-            logging.info(f"ttttttt--tls-no-verify: {tls_start.conn.sni}")
+            logging.info(f"tls-server-no-verify: {tls_start.conn.sni}")
             tls_start.ssl_conn.set_verify(SSL.VERIFY_NONE)
-
-    def requestheaders(self, flow: HTTPFlow) -> None:
-        # We use the host header to dispatch the request:
-        target = flow.request.host_header
-        if target is None:
-            return
-
-        mapping = self._get_sni(target)
-        if mapping is not None:
-            logging.info(f"ooooooo--host: {target}")
-            flow.request.host = mapping.sni
-            if mapping.ip is not None:
-                flow.request.host = mapping.ip
-            if mapping.port is not None:
-                flow.request.port = mapping.port
-            flow.request.host_header = target
 
     def responseheaders(self, flow: HTTPFlow) -> None:
         flow.response.stream = True
@@ -139,7 +130,8 @@ class GithubHosts(TlsConfig):
                     _port = mapping.get("port_dx")
                 if mapping.get("ssl_verify_dx") is not None:
                     _ssl_verify = mapping.get("ssl_verify_dx", "yes")
-            if _ssl_verify == "no":
+
+            if _ssl_verify == "no" and _sni is not None:
                 ssl_no_verify_hosts.append(_sni)
 
             item = Mapping(
@@ -147,9 +139,6 @@ class GithubHosts(TlsConfig):
                         ip=_ip,
                         port=_port
                    )
-            host_mappings[_sni] = item
-            if _ip is not None:
-                host_mappings[_ip] = item
             for pattern in mapping["patterns"]:
                 if pattern.startswith("*."):
                     star_mappings[pattern[2:]] = item

@@ -10,11 +10,13 @@
 
 github_hosts = {
   "mappings": [
-    { # github
+    # github
+    {
       "patterns": [
         "github.com",
       ],
       "sni": "octocaptcha.com",
+      "ip": "20.27.177.113",
     },
     {
       "patterns": [
@@ -24,6 +26,34 @@ github_hosts = {
       "sni": "github.githubassets.com",
       "sni_dx": "www.yelp.com",
       "ip_dx": "151.101.40.116",
+    },
+    # spotify
+    {
+      "patterns": [
+        "www.spotify.com",
+        "spclient.wg.spotify.com",
+      ],
+      "ip": "35.196.128.213",
+      "port": 40129,
+    },
+    {
+      "patterns": [
+        "accounts.spotify.com",
+        "clienttoken.spotify.com",
+        "apresolve.spotify.com",
+        "login5.spotify.com",
+        "api-partner.spotify.com",
+        "challenge.spotify.com",
+      ],
+      "ip": "35.186.224.16",
+    },
+    # google recaptcha
+    {
+      "patterns": [
+        "www.google.com",
+      ],
+      "sni": "www.recaptcha.net",
+      "ip": "113.31.116.80",
     },
   ]
 }
@@ -108,6 +138,13 @@ class GithubHosts(TlsConfig):
             logging.info(f"tls-server-no-verify: {tls_start.conn.sni}")
             tls_start.ssl_conn.set_verify(SSL.VERIFY_NONE)
 
+    def requestheaders(self, flow: HTTPFlow) -> None:
+        # google recaptcha
+        if flow.request.host_header == "www.google.com":
+            if not (flow.request.path.startswith("/recaptcha/") or
+                    flow.request.path.startswith("/js/")):
+                flow.request.host_header = "not-found"
+ 
     def responseheaders(self, flow: HTTPFlow) -> None:
         flow.response.stream = True
 

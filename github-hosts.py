@@ -1,6 +1,6 @@
-# ./mitmdump -s ./github-hosts.py -p 8080
-# ./mitmdump -s ./github-hosts.py -p 8080 --set dianxin=true
-# https://github.com/feng2208/github-hosts
+# ./mitmdump -s ./github-hosts.py -p 8080 
+# --set dianxin=true 
+# --set spotify_auth=true
 
 ### 'xxx_dx' overwrite 'xxx' when '--set dianxian=true'
 # sni, sni_dx
@@ -8,9 +8,19 @@
 # port, port_dx
 # ssl_verify, ssl_verify_dx: default to "yes"
 
+# https://github.com/feng2208/github-hosts
+
+
+# spotify signup and login
+spotify_auth = {
+    "sni": "www.spotify.com",
+    "ip": "35.196.128.213",
+    "port": 40129
+}
+
 github_hosts = {
   "mappings": [
-    # github
+    ### github
     {
       "patterns": [
         "github.com",
@@ -27,14 +37,15 @@ github_hosts = {
       "sni_dx": "www.yelp.com",
       "ip_dx": "151.101.40.116",
     },
-    # spotify
+    ### spotify
     {
+      # spotify signup and login
       "patterns": [
         "www.spotify.com",
         "spclient.wg.spotify.com",
       ],
-      "ip": "35.196.128.213",
-      "port": 40129,
+      "sni": spotify_auth["sni"],
+      "ip": "35.186.224.16",
     },
     {
       "patterns": [
@@ -44,26 +55,46 @@ github_hosts = {
         "login5.spotify.com",
         "api-partner.spotify.com",
         "challenge.spotify.com",
+        "api.spotify.com",
       ],
       "ip": "35.186.224.16",
     },
-    # google recaptcha
+    # spotify ads and trackers
+    {
+      "patterns": [
+        "*.ingest.sentry.io",
+        "bloodhound.spotify.com",
+        "*.doubleclick.net",
+        "*.adsrvr.org",
+        "*.googlesyndication.com",
+        "adeventtrackermonitoring.spotify.com",
+        "video-akpcw-cdn-spotify-com.akamaized.net",
+        "video-fa.scdn.co",
+        "*.litix.io",
+        "*.pix.pub",
+        "relaycdn.anchor.fm",
+        "*.rubiconproject.com",
+      ],
+      "ip": "0.0.0.0",
+    },
+    # spotify recaptcha
     {
       "patterns": [
         "www.google.com",
       ],
       "sni": "www.recaptcha.net",
-      "ip": "113.31.116.80",
+      "ip": "47.115.92.213",
+      "port": 44443,
     },
   ]
 }
-
 
 import logging
 from dataclasses import dataclass
 
 from mitmproxy.addonmanager import Loader
 from mitmproxy.http import HTTPFlow
+from mitmproxy.http import Response
 from mitmproxy import tls
 from mitmproxy import ctx
 
@@ -106,6 +137,12 @@ class GithubHosts(TlsConfig):
             default=False,
             help="set dianxin network",
         )
+        loader.add_option(
+            name="spotify_auth",
+            typespec=bool,
+            default=False,
+            help="spotify auth",
+        )
 
     def running(self):
         if not self.github_hosts_loaded:
@@ -128,6 +165,11 @@ class GithubHosts(TlsConfig):
                 _host = mapping.ip
             if mapping.port is not None:
                 _port = mapping.port
+            # spotify signup and login
+            if ctx.options.spotify_auth and spotify_auth["sni"] == mapping.sni:
+                _host = spotify_auth["ip"]
+                _port = spotify_auth["port"]
+
             data.context.server.address = (_host, _port)
             logging.info(f"tls-server-sni: {data.context.server.sni}")
             logging.info(f"tls-server-address: {data.context.server.address}")
@@ -139,12 +181,20 @@ class GithubHosts(TlsConfig):
             tls_start.ssl_conn.set_verify(SSL.VERIFY_NONE)
 
     def requestheaders(self, flow: HTTPFlow) -> None:
-        # google recaptcha
-        if flow.request.host_header == "www.google.com":
-            if not (flow.request.path.startswith("/recaptcha/") or
-                    flow.request.path.startswith("/js/")):
-                flow.request.host_header = "not-found"
- 
+        req_path = flow.request.path
+        req_host_header = flow.request.host_header
+        # spotify recaptcha
+        if req_host_header == "www.google.com":
+            if not (req_path.startswith("/recaptcha/") or
+                    req_path.startswith("/js/")):
+                flow.response = Response.make(404)
+        # spotify ads and trackers
+        if req_host_header == "spclient.wg.spotify.com":
+            if (req_path.startswith("/ads/") or
+                    req_path.startswith("/ad-logic/") or
+                    req_path.startswith("/gabo-receiver-service/")):
+                flow.response = Response.make(503)
+
     def responseheaders(self, flow: HTTPFlow) -> None:
         flow.response.stream = True
 

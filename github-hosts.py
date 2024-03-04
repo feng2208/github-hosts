@@ -117,12 +117,15 @@ class GithubHosts(TlsConfig):
 
     ssl_no_verify_hosts: list[str]
     github_hosts_loaded: bool
+    # only need to set '--set spotify_auth=true' when signup or login to spotify
+    spotify_auth_not_needed: bool
 
     def __init__(self) -> None:
         self.host_mappings = {}
         self.star_mappings = {}
         self.ssl_no_verify_hosts = []
         self.github_hosts_loaded = False
+        self.spotify_auth_not_needed = False
 
     def load(self, loader: Loader) -> None:
         loader.add_option(
@@ -190,9 +193,17 @@ class GithubHosts(TlsConfig):
                 flow.response = Response.make(404)
         # spotify ads and trackers
         if req_host_header == "spclient.wg.spotify.com":
+            if self.spotify_auth_not_needed:
+                logging.error(
+                """Error: 只有在注册或登录spotify时才需要设置
+                '--set spotify_auth=true'，请去掉该选项重启mitmdump。""")
+                flow.response = Response.make(503)
+                return
             if (req_path.startswith("/ads/") or
                     req_path.startswith("/ad-logic/") or
                     req_path.startswith("/gabo-receiver-service/")):
+                if ctx.options.spotify_auth:
+                    self.spotify_auth_not_needed = True
                 flow.response = Response.make(503)
 
     def responseheaders(self, flow: HTTPFlow) -> None:

@@ -41,6 +41,7 @@ github_hosts = {
     {
       # spotify signup and login
       "patterns": [
+        "accounts.spotify.com",
         "www.spotify.com",
         "spclient.wg.spotify.com",
       ],
@@ -49,7 +50,7 @@ github_hosts = {
     },
     {
       "patterns": [
-        "accounts.spotify.com",
+        "spotify.com",
         "clienttoken.spotify.com",
         "apresolve.spotify.com",
         "login5.spotify.com",
@@ -117,15 +118,12 @@ class GithubHosts(TlsConfig):
 
     ssl_no_verify_hosts: list[str]
     github_hosts_loaded: bool
-    # only need to set '--set spotify_auth=true' when signup or login to spotify
-    spotify_auth_needed: bool
 
     def __init__(self) -> None:
         self.host_mappings = {}
         self.star_mappings = {}
         self.ssl_no_verify_hosts = []
         self.github_hosts_loaded = False
-        self.spotify_auth_needed = True
 
     def load(self, loader: Loader) -> None:
         loader.add_option(
@@ -170,6 +168,7 @@ class GithubHosts(TlsConfig):
                 _port = mapping.port
             # spotify signup and login
             if ctx.options.spotify_auth and spotify_auth["sni"] == mapping.sni:
+                data.ignore_connection = True
                 _host = spotify_auth["ip"]
                 _port = spotify_auth["port"]
 
@@ -193,16 +192,9 @@ class GithubHosts(TlsConfig):
                 flow.response = Response.make(404)
         # spotify ads and trackers
         if req_host_header == "spclient.wg.spotify.com":
-            if not self.spotify_auth_needed and ctx.options.spotify_auth:
-                logging.error(
-                """Error: 只有在注册或登录spotify时才需要设置
-                '--set spotify_auth=true'，请去掉该选项重启mitmdump。""")
-                flow.response = Response.make(503)
-                return
             if (req_path.startswith("/ads/") or
                     req_path.startswith("/ad-logic/") or
                     req_path.startswith("/gabo-receiver-service/")):
-                self.spotify_auth_needed = False
                 flow.response = Response.make(503)
 
     def responseheaders(self, flow: HTTPFlow) -> None:

@@ -165,6 +165,7 @@ class GithubHosts(TlsConfig):
         if ctx.options.spotify_auth and _host in spotify_audio:
             _host = "0.0.0.0"
             data.context.server.address = (_host, _port)
+            logging.error("请勿使用参数--set spotify_auth=true")
             return
 
         mapping = self._get_sni(_host)

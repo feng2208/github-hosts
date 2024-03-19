@@ -18,6 +18,12 @@ spotify_auth = {
     "port": 40129
 }
 
+# spotify audio
+spotify_audio = [
+    "audio-fa.scdn.co",
+    "audio-ak-spotify-com.akamaized.net",
+]
+
 github_hosts = {
   "mappings": [
     ### github
@@ -152,10 +158,15 @@ class GithubHosts(TlsConfig):
 
     def tls_clienthello(self, data: tls.ClientHelloData) -> None:
         data.ignore_connection = True
-
         _host = data.context.server.address[0]
         _port = data.context.server.address[1]
         logging.info(f"tls-server-host: {_host}")
+
+        if ctx.options.spotify_auth and _host in spotify_audio:
+            _host = "0.0.0.0"
+            data.context.server.address = (_host, _port)
+            return
+
         mapping = self._get_sni(_host)
         if mapping is not None:
             if mapping.sni is not None:

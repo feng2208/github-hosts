@@ -1,14 +1,19 @@
-# ./mitmdump -s ./github-hosts.py -p 8080 
-# --set dianxin=true 
-# --set spotify_auth=true
-
-### 'xxx_dx' overwrite 'xxx' when '--set dianxian=true'
-# sni, sni_dx
-# ip, ip_dx
-# port, port_dx
-# ssl_verify, ssl_verify_dx: default to "yes"
-
 # https://github.com/feng2208/github-hosts
+
+# mitmdump -s github-hosts.py -p 8080 
+# --set spotify_auth
+# --set dianxin
+
+# "patterns": [
+#     "example.com",
+#     "*.example.com", # all subdomains
+#  ],
+# "sni": "",
+# "ip": "",
+# "port": ,
+# "ssl_verify": "", # yes or no, default yes
+# "ssl_verify": "", # yes or no, default yes
+# xxx_dx: for telecom network
 
 
 # spotify signup and login
@@ -18,7 +23,6 @@ spotify_auth = {
     "port": 40129
 }
 
-# spotify audio
 spotify_audio = [
     "audio-fa.scdn.co",
     "audio-ak-spotify-com.akamaized.net",
@@ -37,10 +41,11 @@ github_hosts = {
     {
       "patterns": [
         "*.githubusercontent.com",
+        # github.githubassets.com/assets/ == github.com/assets/
         "github.githubassets.com",
       ],
-      "sni": "github.githubassets.com",
-      "sni_dx": "www.yelp.com",
+      "sni": "yelp.com",
+      "ip": "151.101.232.116",
       "ip_dx": "151.101.40.116",
     },
     ### spotify
@@ -139,10 +144,16 @@ class GithubHosts(TlsConfig):
             help="set connection strategy to lazy",
         )
         loader.add_option(
+            name="showhost",
+            typespec=bool,
+            default=True,
+            help="Use the Host header to construct URLs for display",
+        )
+        loader.add_option(
             name="dianxin",
             typespec=bool,
             default=False,
-            help="set dianxin network",
+            help="set telecom network",
         )
         loader.add_option(
             name="spotify_auth",
@@ -158,14 +169,20 @@ class GithubHosts(TlsConfig):
 
     def tls_clienthello(self, data: tls.ClientHelloData) -> None:
         data.ignore_connection = True
-        _host = data.context.server.address[0]
+        _host = data.context.client.sni
         _port = data.context.server.address[1]
-        logging.info(f"tls-server-host: {_host}")
+        if _host is None:
+            return
 
+        if "transparent" in ctx.options.mode:
+            if _port == ctx.options.listen_port and _port != 443:
+                _port = 443
+
+        # spotify
         if ctx.options.spotify_auth and _host in spotify_audio:
             _host = "0.0.0.0"
             data.context.server.address = (_host, _port)
-            logging.error("请勿使用参数--set spotify_auth=true")
+            logging.error("请勿使用参数--set spotify_auth")
             return
 
         mapping = self._get_sni(_host)
@@ -180,34 +197,45 @@ class GithubHosts(TlsConfig):
                 _port = mapping.port
             # spotify signup and login
             if ctx.options.spotify_auth and spotify_auth["sni"] == mapping.sni:
-                data.ignore_connection = True
                 _host = spotify_auth["ip"]
                 _port = spotify_auth["port"]
+            logging.info(f"xxxxxxxx-tls-server-host: {data.context.client.sni}")
+            logging.info(f"xxxxxxxx-tls-server-sni: {data.context.server.sni}")
+            logging.info(f"xxxxxxxx-tls-server-address: ({_host}:{_port})")
+            if data.ignore_connection:
+                logging.info("xxxxxxxx-connection: forward")
 
-            data.context.server.address = (_host, _port)
-            logging.info(f"tls-server-sni: {data.context.server.sni}")
-            logging.info(f"tls-server-address: {data.context.server.address}")
+        data.context.server.address = (_host, _port)
 
     def tls_start_server(self, tls_start: tls.TlsData) -> None:
         super().tls_start_server(tls_start)
         if tls_start.conn.sni in self.ssl_no_verify_hosts:
-            logging.info(f"tls-server-no-verify: {tls_start.conn.sni}")
+            logging.info(f"xxxxxxxx-tls-server-no-verify: {tls_start.conn.sni}")
             tls_start.ssl_conn.set_verify(SSL.VERIFY_NONE)
 
     def requestheaders(self, flow: HTTPFlow) -> None:
         req_path = flow.request.path
         req_host_header = flow.request.host_header
+        if req_host_header is None:
+            return
+
         # spotify recaptcha
         if req_host_header == "www.google.com":
             if not (req_path.startswith("/recaptcha/") or
                     req_path.startswith("/js/")):
                 flow.response = Response.make(404)
         # spotify ads and trackers
-        if req_host_header == "spclient.wg.spotify.com":
+        elif req_host_header == "spclient.wg.spotify.com":
             if (req_path.startswith("/ads/") or
                     req_path.startswith("/ad-logic/") or
                     req_path.startswith("/gabo-receiver-service/")):
                 flow.response = Response.make(503)
+
+        if "transparent" in ctx.options.mode and flow.request.scheme == "http":
+            flow.request.host = req_host_header
+            if (flow.request.port == ctx.options.listen_port and
+                    flow.request.port != 80):
+                flow.request.port = 80
 
     def responseheaders(self, flow: HTTPFlow) -> None:
         flow.response.stream = True

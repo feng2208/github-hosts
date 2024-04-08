@@ -41,7 +41,6 @@ github_hosts = {
     {
       "patterns": [
         "*.githubusercontent.com",
-        # github.githubassets.com/assets/ == github.com/assets/
         "github.githubassets.com",
       ],
       "sni": "yelp.com",
@@ -173,6 +172,7 @@ class GithubHosts(TlsConfig):
         _port = data.context.server.address[1]
         if _host is None:
             return
+        logging.info(f"xxxxxxxx-tls-server-host: {_host}")
 
         if "transparent" in ctx.options.mode:
             if _port == ctx.options.listen_port and _port != 443:
@@ -199,7 +199,6 @@ class GithubHosts(TlsConfig):
             if ctx.options.spotify_auth and spotify_auth["sni"] == mapping.sni:
                 _host = spotify_auth["ip"]
                 _port = spotify_auth["port"]
-            logging.info(f"xxxxxxxx-tls-server-host: {data.context.client.sni}")
             logging.info(f"xxxxxxxx-tls-server-sni: {data.context.server.sni}")
             logging.info(f"xxxxxxxx-tls-server-address: ({_host}:{_port})")
             if data.ignore_connection:

@@ -56,7 +56,7 @@ github_hosts = {
         "spclient.wg.spotify.com",
       ],
       "sni": spotify_auth["sni"],
-      "ip": "35.186.224.16",
+      "ip": "gae2-spclient.spotify.com",
     },
     {
       "patterns": [
@@ -68,7 +68,7 @@ github_hosts = {
         "challenge.spotify.com",
         "api.spotify.com",
       ],
-      "ip": "35.186.224.16",
+      "ip": "gae2-spclient.spotify.com",
     },
     # spotify ads and trackers
     {
@@ -227,6 +227,7 @@ class GithubHosts(TlsConfig):
         elif req_host_header == "spclient.wg.spotify.com":
             if (req_path.startswith("/ads/") or
                     req_path.startswith("/ad-logic/") or
+                    req_path.startswith("/desktop-update/") or
                     req_path.startswith("/gabo-receiver-service/")):
                 flow.response = Response.make(503)
 

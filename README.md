@@ -1,5 +1,6 @@
 # github-hosts
-[加速github](https://github.com/feng2208/github-hosts)([mirror](https://github-hosts.onrender.com/))。
+[加速github](https://github.com/feng2208/github-hosts)([mirror](https://github-hosts.onrender.com/))，
+以及在[国内注册使用spotify](https://feng2208.onrender.com/posts/spotify.html)。
 
 相关说明(https://feng2208.onrender.com/posts/github-speed-up.html)
 

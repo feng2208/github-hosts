@@ -10,14 +10,12 @@
 
 ```powershell
 # 电信网络
-
  & "C:\Program Files\Google\Chrome\Application\chrome.exe" --host-rules="MAP github.com octocaptcha.com:443, MAP github.githubassets.com yelp.com:443, MAP *.githubusercontent.com yelp.com:443" --host-resolver-rules="MAP octocaptcha.com 20.27.177.113, MAP yelp.com 151.101.40.116"
 
 ```
 
 ```powershell
 # 其他网络
-
  & "C:\Program Files\Google\Chrome\Application\chrome.exe" --host-rules="MAP github.com octocaptcha.com:443, MAP github.githubassets.com yelp.com:443, MAP *.githubusercontent.com yelp.com:443" --host-resolver-rules="MAP octocaptcha.com 20.27.177.113, MAP yelp.com 151.101.232.116"
 
 ```
@@ -28,14 +26,12 @@
 ## 微软Edge浏览器
 ```powershell
 # 电信网络
-
  & "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --host-rules="MAP github.com octocaptcha.com:443, MAP github.githubassets.com yelp.com:443, MAP *.githubusercontent.com yelp.com:443" --host-resolver-rules="MAP octocaptcha.com 20.27.177.113, MAP yelp.com 151.101.40.116"
 
 ```
 
 ```powershell
 # 其他网络
-
  & "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --host-rules="MAP github.com octocaptcha.com:443, MAP github.githubassets.com yelp.com:443, MAP *.githubusercontent.com yelp.com:443" --host-resolver-rules="MAP octocaptcha.com 20.27.177.113, MAP yelp.com 151.101.232.116"
 
 ```

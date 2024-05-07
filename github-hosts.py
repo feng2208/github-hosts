@@ -194,43 +194,43 @@ class GithubHosts(TlsConfig):
 
     def tls_clienthello(self, data: tls.ClientHelloData) -> None:
         data.ignore_connection = True
-        _host = data.context.client.sni
-        _port = data.context.server.address[1]
-        if _host is None:
+        host = data.context.client.sni
+        port = data.context.server.address[1]
+        if host is None:
             return
-        logging.info(f"xxxxxxxx-tls-server-host: {_host}")
+        logging.info(f"xxxxxxxx-tls-server-host: {host}")
 
         if "transparent" in ctx.options.mode:
-            if _port == ctx.options.listen_port and _port != 443:
-                _port = 443
+            if port == ctx.options.listen_port and port != 443:
+                port = 443
 
         # spotify
-        if ctx.options.spotify_auth and _host in spotify_audio:
-            _host = "0.0.0.0"
-            data.context.server.address = (_host, _port)
+        if ctx.options.spotify_auth and host in spotify_audio:
+            host = "0.0.0.0"
+            data.context.server.address = (host, port)
             logging.error("请勿使用参数--set spotify_auth")
             return
 
-        mapping = self._get_sni(_host)
+        mapping = self._get_sni(host)
         if mapping is not None:
             if mapping.sni is not None:
                 data.ignore_connection = False
                 data.context.server.sni = mapping.sni
-                _host = mapping.sni
+                host = mapping.sni
             if mapping.ip is not None:
-                _host = mapping.ip
+                host = mapping.ip
             if mapping.port is not None:
-                _port = mapping.port
+                port = mapping.port
             # spotify signup and login
             if ctx.options.spotify_auth and spotify_auth["sni"] == mapping.sni:
-                _host = spotify_auth["ip"]
-                _port = spotify_auth["port"]
+                host = spotify_auth["ip"]
+                port = spotify_auth["port"]
             logging.info(f"xxxxxxxx-tls-server-sni: {data.context.server.sni}")
-            logging.info(f"xxxxxxxx-tls-server-address: ({_host}:{_port})")
+            logging.info(f"xxxxxxxx-tls-server-address: ({host}:{port})")
             if data.ignore_connection:
                 logging.info("xxxxxxxx-connection: forward")
 
-        data.context.server.address = (_host, _port)
+        data.context.server.address = (host, port)
 
     def tls_start_server(self, tls_start: tls.TlsData) -> None:
         super().tls_start_server(tls_start)
@@ -272,27 +272,27 @@ class GithubHosts(TlsConfig):
         ssl_no_verify_hosts: list[str] = []
 
         for mapping in github_hosts["mappings"]:
-            _sni = mapping.get("sni")
-            _ip = mapping.get("ip")
-            _port = mapping.get("port")
-            _ssl_verify = mapping.get("ssl_verify", "yes")
+            sni = mapping.get("sni")
+            ip = mapping.get("ip")
+            port = mapping.get("port")
+            ssl_verify = mapping.get("ssl_verify", "yes")
             if ctx.options.dianxin:
                 if mapping.get("sni_dx") is not None:
-                    _sni = mapping.get("sni_dx")
+                    sni = mapping.get("sni_dx")
                 if mapping.get("ip_dx") is not None:
-                    _ip = mapping.get("ip_dx")
+                    ip = mapping.get("ip_dx")
                 if mapping.get("port_dx") is not None:
-                    _port = mapping.get("port_dx")
+                    port = mapping.get("port_dx")
                 if mapping.get("ssl_verify_dx") is not None:
-                    _ssl_verify = mapping.get("ssl_verify_dx", "yes")
+                    ssl_verify = mapping.get("ssl_verify_dx", "yes")
 
-            if _ssl_verify == "no" and _sni is not None:
-                ssl_no_verify_hosts.append(_sni)
+            if ssl_verify == "no" and sni is not None:
+                ssl_no_verify_hosts.append(sni)
 
             item = Mapping(
-                        sni=_sni,
-                        ip=_ip,
-                        port=_port
+                        sni=sni,
+                        ip=ip,
+                        port=port
                    )
             for pattern in mapping["patterns"]:
                 if pattern.startswith("*."):

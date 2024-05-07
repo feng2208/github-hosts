@@ -23,6 +23,18 @@ spotify_auth = {
     "port": 40129
 }
 
+spotify_geo = {
+    "hosts": [
+        "ap-gae2.spotify.com",
+        "ap-guc3.spotify.com",
+        "ap-gue1.spotify.com",
+        "ap-gew1.spotify.com",
+        "ap-gew4.spotify.com",
+    ],
+    "ip": "138.2.35.57",
+    "port": 4071
+}
+
 spotify_audio = [
     "audio-fa.scdn.co",
     "audio-ak-spotify-com.akamaized.net",
@@ -85,6 +97,8 @@ github_hosts = {
         "*.pix.pub",
         "relaycdn.anchor.fm",
         "*.rubiconproject.com",
+        "pixel.spotify.com",
+        "pixel-static.spotify.com",
       ],
       "ip": "0.0.0.0",
     },
@@ -108,6 +122,7 @@ from mitmproxy.http import HTTPFlow
 from mitmproxy.http import Response
 from mitmproxy import tls
 from mitmproxy import ctx
+from mitmproxy.proxy.server_hooks import ServerConnectionHookData
 
 from OpenSSL import SSL
 from mitmproxy.addons.tlsconfig import TlsConfig
@@ -165,6 +180,17 @@ class GithubHosts(TlsConfig):
         if not self.github_hosts_loaded:
             self._load_github_hosts()
             self.github_hosts_loaded = True
+
+    def server_connect(self, data: ServerConnectionHookData) -> None:
+        # http mode
+        if "regular" not in ctx.options.mode:
+            return
+
+        host = data.server.address[0]
+        if ctx.options.spotify_auth and host in spotify_geo['hosts']:
+            msg = f"{host} ({spotify_geo['ip']}:{spotify_geo['port']})"
+            logging.info(f"xxxxxxxx-spotify-geo-server: {msg}")
+            data.server.address = (spotify_geo['ip'], spotify_geo['port'])
 
     def tls_clienthello(self, data: tls.ClientHelloData) -> None:
         data.ignore_connection = True

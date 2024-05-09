@@ -5,8 +5,7 @@
 相关说明(https://feng2208.gleeze.com/posts/github-speed-up.html)
 
 ## 谷歌浏览器
-从命令行启动：
-
+从`powershell`命令行启动：
 
 ```powershell
 # 电信网络

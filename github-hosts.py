@@ -24,6 +24,7 @@ spotify_auth = {
 }
 
 spotify_geo = {
+    # spotify client access point: https://apresolve.spotify.com/
     "hosts": [
         "ap-gae2.spotify.com",
         "ap-guc3.spotify.com",
@@ -108,8 +109,8 @@ github_hosts = {
         "www.google.com",
       ],
       "sni": "www.recaptcha.net",
-      "ip": "47.115.92.213",
-      "port": 44443,
+      "ip": "60.72.28.92",
+      "port": 18516,
     },
   ]
 }
@@ -187,7 +188,7 @@ class GithubHosts(TlsConfig):
             return
 
         host = data.server.address[0]
-        if ctx.options.spotify_auth and host in spotify_geo['hosts']:
+        if host in spotify_geo['hosts']:
             msg = f"{host} ({spotify_geo['ip']}:{spotify_geo['port']})"
             logging.info(f"xxxxxxxx-spotify-geo-server: {msg}")
             data.server.address = (spotify_geo['ip'], spotify_geo['port'])
@@ -199,10 +200,6 @@ class GithubHosts(TlsConfig):
         if host is None:
             return
         logging.info(f"xxxxxxxx-tls-server-host: {host}")
-
-        if "transparent" in ctx.options.mode:
-            if port == ctx.options.listen_port and port != 443:
-                port = 443
 
         # spotify
         if ctx.options.spotify_auth and host in spotify_audio:
@@ -256,12 +253,6 @@ class GithubHosts(TlsConfig):
                     req_path.startswith("/desktop-update/") or
                     req_path.startswith("/gabo-receiver-service/")):
                 flow.response = Response.make(503)
-
-        if "transparent" in ctx.options.mode and flow.request.scheme == "http":
-            flow.request.host = req_host_header
-            if (flow.request.port == ctx.options.listen_port and
-                    flow.request.port != 80):
-                flow.request.port = 80
 
     def responseheaders(self, flow: HTTPFlow) -> None:
         flow.response.stream = True

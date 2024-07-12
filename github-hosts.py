@@ -16,6 +16,13 @@
 # xxx_dx: for telecom network
 
 
+# apple app store region
+apple_region = {
+    "host": "-buy.itunes.apple.com",
+    "ip": "138.2.35.57",
+    "port": 4072
+}
+
 # spotify signup and login
 spotify_auth = {
     "sni": "www.spotify.com",
@@ -206,6 +213,14 @@ class GithubHosts(TlsConfig):
             host = "0.0.0.0"
             data.context.server.address = (host, port)
             logging.error("请勿使用参数--set spotify_auth")
+            return
+
+        # apple app store region
+        if host.endswith(apple_region['host']):
+            host = apple_region["ip"]
+            port = apple_region["port"]
+            data.context.server.address = (host, port)
+            logging.info(f"xxxxxxxx-apple-region-address: ({host}:{port})")
             return
 
         mapping = self._get_sni(host)

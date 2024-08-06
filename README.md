@@ -1,8 +1,9 @@
 # github-hosts
-[加速github](https://github.com/feng2208/github-hosts)([mirror](https://gh.feng2208.gleeze.com/))，
-以及在[国内注册使用spotify](https://feng2208.gleeze.com/posts/spotify.html)。
+拥有以下功能：
+- [加速github](https://github.com/feng2208/github-hosts)([mirror](https://gh.feng2208.gleeze.com/))，相关说明(https://feng2208.gleeze.com/posts/github-speed-up.html)
+- [国内注册使用spotify](https://feng2208.gleeze.com/posts/spotify.html)
+- 更改苹果app store地区
 
-相关说明(https://feng2208.gleeze.com/posts/github-speed-up.html)
 
 ## 谷歌浏览器
 从`powershell`命令行启动：

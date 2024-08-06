@@ -2,7 +2,6 @@
 
 # mitmdump -s github-hosts.py -p 8080 
 # --set spotify_auth
-# --set dianxin
 
 # "patterns": [
 #     "example.com",
@@ -11,9 +10,7 @@
 # "sni": "",
 # "ip": "",
 # "port": ,
-# "ssl_verify": "", # yes or no, default yes
-# "ssl_verify": "", # yes or no, default yes
-# xxx_dx: for telecom network
+# "ssl_verify": "", # yes|no, default yes; when set to "no", "sni" must not be empty
 
 
 # apple app store region
@@ -65,7 +62,6 @@ github_hosts = {
       ],
       "sni": "yelp.com",
       "ip": "151.101.232.116",
-      "ip_dx": "151.101.40.116",
     },
     ### spotify
     {
@@ -172,12 +168,6 @@ class GithubHosts(TlsConfig):
             help="Use the Host header to construct URLs for display",
         )
         loader.add_option(
-            name="dianxin",
-            typespec=bool,
-            default=False,
-            help="set telecom network",
-        )
-        loader.add_option(
             name="spotify_auth",
             typespec=bool,
             default=False,
@@ -282,16 +272,6 @@ class GithubHosts(TlsConfig):
             ip = mapping.get("ip")
             port = mapping.get("port")
             ssl_verify = mapping.get("ssl_verify", "yes")
-            if ctx.options.dianxin:
-                if mapping.get("sni_dx") is not None:
-                    sni = mapping.get("sni_dx")
-                if mapping.get("ip_dx") is not None:
-                    ip = mapping.get("ip_dx")
-                if mapping.get("port_dx") is not None:
-                    port = mapping.get("port_dx")
-                if mapping.get("ssl_verify_dx") is not None:
-                    ssl_verify = mapping.get("ssl_verify_dx", "yes")
-
             if ssl_verify == "no" and sni is not None:
                 ssl_no_verify_hosts.append(sni)
 

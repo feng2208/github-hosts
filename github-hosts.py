@@ -23,8 +23,8 @@ apple_region = {
 # spotify signup and login
 spotify_auth = {
     "sni": "www.spotify.com",
-    "ip": "35.196.128.213",
-    "port": 40129
+    "ip": "50.198.188.10",
+    "port": 32034
 }
 
 spotify_geo = {

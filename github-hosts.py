@@ -1,7 +1,6 @@
 # https://github.com/feng2208/github-hosts
 
 # mitmdump -s github-hosts.py -p 8080 
-# --set spotify_auth
 
 # "patterns": [
 #     "example.com",
@@ -17,14 +16,7 @@
 apple_region = {
     "host": "-buy.itunes.apple.com",
     "ip": "138.2.35.57",
-    "port": 4072
-}
-
-# spotify signup and login
-spotify_auth = {
-    "sni": "www.spotify.com",
-    "ip": "50.198.188.10",
-    "port": 32034
+    "port": 443
 }
 
 spotify_geo = {
@@ -37,13 +29,8 @@ spotify_geo = {
         "ap-gew4.spotify.com",
     ],
     "ip": "138.2.35.57",
-    "port": 4071
+    "port": 443
 }
-
-spotify_audio = [
-    "audio-fa.scdn.co",
-    "audio-ak-spotify-com.akamaized.net",
-]
 
 github_hosts = {
   "mappings": [
@@ -71,8 +58,8 @@ github_hosts = {
         "www.spotify.com",
         "spclient.wg.spotify.com",
       ],
-      "sni": spotify_auth["sni"],
-      "ip": "gae2-spclient.spotify.com",
+      "sni": "www.spotify.com",
+      "ip": "138.2.35.57"
     },
     {
       "patterns": [
@@ -167,12 +154,6 @@ class GithubHosts(TlsConfig):
             default=True,
             help="Use the Host header to construct URLs for display",
         )
-        loader.add_option(
-            name="spotify_auth",
-            typespec=bool,
-            default=False,
-            help="spotify auth",
-        )
 
     def running(self):
         if not self.github_hosts_loaded:
@@ -198,13 +179,6 @@ class GithubHosts(TlsConfig):
             return
         logging.info(f"xxxxxxxx-tls-server-host: {host}")
 
-        # spotify
-        if ctx.options.spotify_auth and host in spotify_audio:
-            host = "0.0.0.0"
-            data.context.server.address = (host, port)
-            logging.error("请勿使用参数--set spotify_auth")
-            return
-
         # apple app store region
         if host.endswith(apple_region['host']):
             host = apple_region["ip"]
@@ -223,10 +197,6 @@ class GithubHosts(TlsConfig):
                 host = mapping.ip
             if mapping.port is not None:
                 port = mapping.port
-            # spotify signup and login
-            if ctx.options.spotify_auth and spotify_auth["sni"] == mapping.sni:
-                host = spotify_auth["ip"]
-                port = spotify_auth["port"]
             logging.info(f"xxxxxxxx-tls-server-sni: {data.context.server.sni}")
             logging.info(f"xxxxxxxx-tls-server-address: ({host}:{port})")
             if data.ignore_connection:

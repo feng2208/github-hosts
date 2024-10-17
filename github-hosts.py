@@ -44,11 +44,17 @@ github_hosts = {
     },
     {
       "patterns": [
-        "*.githubusercontent.com",
         "github.githubassets.com",
       ],
       "sni": "yelp.com",
-      "ip": "151.101.232.116",
+      "ip": "199.232.240.116",
+    },
+    {
+      "patterns": [
+        "*.githubusercontent.com",
+      ],
+      "sni": "githubusercontent.com",
+      "ip": "199.232.176.133",
     },
     ### spotify
     {

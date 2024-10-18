@@ -7,16 +7,14 @@
 #     "*.example.com", # all subdomains
 #  ],
 # "sni": "",
-# "ip": "",
-# "port": ,
-# "ssl_verify": "", # yes|no, default yes; when set to "no", "sni" must not be empty
+# "address": ("ip", port),
+# "verify_host": "", # use to verify server cert
 
 
 # apple app store region
 apple_region = {
     "host": "-buy.itunes.apple.com",
-    "ip": "138.2.35.57",
-    "port": 443
+    "address": ("138.2.35.57", 443),
 }
 
 spotify_geo = {
@@ -28,8 +26,7 @@ spotify_geo = {
         "ap-gew1.spotify.com",
         "ap-gew4.spotify.com",
     ],
-    "ip": "138.2.35.57",
-    "port": 443
+    "address": ("138.2.35.57", 443),
 }
 
 github_hosts = {
@@ -40,21 +37,21 @@ github_hosts = {
         "github.com",
       ],
       "sni": "octocaptcha.com",
-      "ip": "20.27.177.113",
+      "address": ("20.27.177.113", 443),
     },
     {
       "patterns": [
         "github.githubassets.com",
       ],
       "sni": "yelp.com",
-      "ip": "199.232.240.116",
+      "address": ("199.232.240.116", 443),
     },
     {
       "patterns": [
         "*.githubusercontent.com",
       ],
       "sni": "githubusercontent.com",
-      "ip": "199.232.176.133",
+      "address": ("199.232.176.133", 443),
     },
     ### spotify
     {
@@ -65,7 +62,7 @@ github_hosts = {
         "spclient.wg.spotify.com",
       ],
       "sni": "www.spotify.com",
-      "ip": "138.2.35.57"
+      "address": ("138.2.35.57", 443),
     },
     {
       "patterns": [
@@ -77,7 +74,7 @@ github_hosts = {
         "challenge.spotify.com",
         "api.spotify.com",
       ],
-      "ip": "gae2-spclient.spotify.com",
+      "address": ("gae2-spclient.spotify.com", 443),
     },
     # spotify ads and trackers
     {
@@ -97,7 +94,7 @@ github_hosts = {
         "pixel.spotify.com",
         "pixel-static.spotify.com",
       ],
-      "ip": "0.0.0.0",
+      "address": ("0.0.0.1", 443),
     },
     # spotify recaptcha
     {
@@ -105,8 +102,7 @@ github_hosts = {
         "www.google.com",
       ],
       "sni": "www.recaptcha.net",
-      "ip": "60.72.28.92",
-      "port": 18516,
+      "address": ("60.72.28.92", 18516),
     },
   ]
 }
@@ -120,16 +116,39 @@ from mitmproxy.http import Response
 from mitmproxy import tls
 from mitmproxy import ctx
 from mitmproxy.proxy.server_hooks import ServerConnectionHookData
+from mitmproxy.addons.tlsconfig import TlsConfig
 
 from OpenSSL import SSL
-from mitmproxy.addons.tlsconfig import TlsConfig
+from OpenSSL.crypto import X509StoreContext
+from OpenSSL.crypto import X509StoreContextError
+from cryptography import x509
+
+
+ssl_verify_hosts: dict = {}
+
+def verify_callback(conn, cert, error_n, error_depth, return_code) -> bool:
+    ctx = conn.get_context()
+    store = ctx.get_cert_store()
+    cert_chain = conn.get_peer_cert_chain()
+    host = conn.get_servername().decode("utf-8")
+
+    try:
+        X509StoreContext(store, cert, cert_chain).verify_certificate()
+    except X509StoreContextError:
+        return False
+
+    if cert_chain[0].get_serial_number() == cert.get_serial_number():
+        crypto_cert = cert.to_cryptography()
+        ext = crypto_cert.extensions.get_extension_for_class(x509.SubjectAlternativeName)
+        if ssl_verify_hosts[host] not in ext.value.get_values_for_type(x509.DNSName):
+            return False
+    return True
+
 
 @dataclass
 class Mapping:
     sni: str
-    ip: str
-    port: int
-
+    address: tuple
 
 class GithubHosts(TlsConfig):
     # configurations for regular ("example.com") mappings:
@@ -138,13 +157,11 @@ class GithubHosts(TlsConfig):
     # Configurations for star ("*.example.com") mappings:
     star_mappings: dict[str, Mapping]
 
-    ssl_no_verify_hosts: list[str]
     github_hosts_loaded: bool
 
     def __init__(self) -> None:
         self.host_mappings = {}
         self.star_mappings = {}
-        self.ssl_no_verify_hosts = []
         self.github_hosts_loaded = False
 
     def load(self, loader: Loader) -> None:
@@ -167,30 +184,23 @@ class GithubHosts(TlsConfig):
             self.github_hosts_loaded = True
 
     def server_connect(self, data: ServerConnectionHookData) -> None:
-        # http mode
-        if "regular" not in ctx.options.mode:
-            return
-
         host = data.server.address[0]
         if host in spotify_geo['hosts']:
-            msg = f"{host} ({spotify_geo['ip']}:{spotify_geo['port']})"
+            msg = f"{host} {spotify_geo['address']}"
             logging.info(f"xxxxxxxx-spotify-geo-server: {msg}")
-            data.server.address = (spotify_geo['ip'], spotify_geo['port'])
+            data.server.address = spotify_geo['address']
 
     def tls_clienthello(self, data: tls.ClientHelloData) -> None:
         data.ignore_connection = True
         host = data.context.client.sni
-        port = data.context.server.address[1]
         if host is None:
             return
         logging.info(f"xxxxxxxx-tls-server-host: {host}")
 
         # apple app store region
         if host.endswith(apple_region['host']):
-            host = apple_region["ip"]
-            port = apple_region["port"]
-            data.context.server.address = (host, port)
-            logging.info(f"xxxxxxxx-apple-region-address: ({host}:{port})")
+            data.context.server.address = apple_region['address']
+            logging.info(f"xxxxxxxx-apple-region-address: {apple_region['address']}")
             return
 
         mapping = self._get_sni(host)
@@ -198,23 +208,15 @@ class GithubHosts(TlsConfig):
             if mapping.sni is not None:
                 data.ignore_connection = False
                 data.context.server.sni = mapping.sni
-                host = mapping.sni
-            if mapping.ip is not None:
-                host = mapping.ip
-            if mapping.port is not None:
-                port = mapping.port
-            logging.info(f"xxxxxxxx-tls-server-sni: {data.context.server.sni}")
-            logging.info(f"xxxxxxxx-tls-server-address: ({host}:{port})")
-            if data.ignore_connection:
-                logging.info("xxxxxxxx-connection: forward")
-
-        data.context.server.address = (host, port)
+                logging.info(f"xxxxxxxx-tls-server-sni: {mapping.sni}")
+            if mapping.address is not None:
+                data.context.server.address = mapping.address
+                logging.info(f"xxxxxxxx-tls-server-address: {mapping.address}")
 
     def tls_start_server(self, tls_start: tls.TlsData) -> None:
         super().tls_start_server(tls_start)
-        if tls_start.conn.sni in self.ssl_no_verify_hosts:
-            logging.info(f"xxxxxxxx-tls-server-no-verify: {tls_start.conn.sni}")
-            tls_start.ssl_conn.set_verify(SSL.VERIFY_NONE)
+        if tls_start.conn.sni in list(ssl_verify_hosts.keys()):
+            tls_start.ssl_conn.set_verify(SSL.VERIFY_PEER, verify_callback)
 
     def requestheaders(self, flow: HTTPFlow) -> None:
         req_path = flow.request.path
@@ -241,20 +243,17 @@ class GithubHosts(TlsConfig):
     def _load_github_hosts(self) -> None:
         host_mappings: dict[str, Mapping] = {}
         star_mappings: dict[str, Mapping] = {}
-        ssl_no_verify_hosts: list[str] = []
 
         for mapping in github_hosts["mappings"]:
+            address = mapping.get("address")
             sni = mapping.get("sni")
-            ip = mapping.get("ip")
-            port = mapping.get("port")
-            ssl_verify = mapping.get("ssl_verify", "yes")
-            if ssl_verify == "no" and sni is not None:
-                ssl_no_verify_hosts.append(sni)
+            verify_host = mapping.get("verify_host")
+            if verify_host is not None and sni is not None:
+                ssl_verify_hosts[sni] = verify_host
 
             item = Mapping(
                         sni=sni,
-                        ip=ip,
-                        port=port
+                        address=address,
                    )
             for pattern in mapping["patterns"]:
                 if pattern.startswith("*."):
@@ -264,7 +263,6 @@ class GithubHosts(TlsConfig):
 
         self.host_mappings = host_mappings
         self.star_mappings = star_mappings
-        self.ssl_no_verify_hosts = ssl_no_verify_hosts
 
     def _get_sni(self, host: str) -> Mapping | None:
         mapping = self.host_mappings.get(host)

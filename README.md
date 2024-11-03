@@ -2,7 +2,7 @@
 拥有以下功能：
 
 - [加速github](https://github.com/feng2208/github-hosts)([mirror](https://gh.feng2208.gleeze.com/))，相关说明(https://feng2208.gleeze.com/posts/github-speed-up.html)
-- [国内注册使用spotify](https://feng2208.gleeze.com/posts/spotify.html)
+- [国内注册使用spotify](https://feng2208.gleeze.com/posts/spotify.html)，无广告，无14天限制，可以任意切歌。
 - 更改苹果app store地区
 
 

@@ -10,6 +10,8 @@
 # "address": ("ip", port),
 # "verify_host": "", # use to verify server cert
 
+# blackboxprotobuf version: 1.4.0 https://github.com/nccgroup/blackboxprotobuf
+# six version: 1.16.0 https://github.com/benjaminp/six
 
 # apple app store region
 apple_region = {
@@ -107,6 +109,37 @@ github_hosts = {
   ]
 }
 
+# spotify vip
+changes = {
+    'player-license': 'premium',
+    'streaming-rules': '',
+    'financial-product': 'pr:premium,tc:0',
+    'license-acceptance-grace-days': 30,
+    'name': 'Spotify Premium',
+    'on-demand': 1,
+    'ads': 0,
+    'catalogue': 'premium',
+    'high-bitrate': 1,
+    'libspotify': 1,
+    'nft-disabled': '1',
+    'shuffle': 0,
+    'audio-quality': '1',
+    'offline': 1,
+    'pause-after': 0,
+    'can_use_superbird': 1,
+    'type': 'premium',
+    'com.spotify.madprops.use.ucs.product.state': 1,
+}
+
+changes_del = [
+    'ad-use-adlogic',
+    'ad-catalogues',
+]
+
+
+ssl_verify_hosts: dict = {}
+
+
 import logging
 from dataclasses import dataclass
 
@@ -123,8 +156,37 @@ from OpenSSL.crypto import X509StoreContext
 from OpenSSL.crypto import X509StoreContextError
 from cryptography import x509
 
+import os
+import sys
+_BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, _BASE_DIR + "/lib/")
+import blackboxprotobuf
 
-ssl_verify_hosts: dict = {}
+
+# spotify ptotobuf
+def modify_spotify_body(data, bootstrap=False):
+    message, typedef = blackboxprotobuf.decode_message(data)
+    if bootstrap:
+        configs = message['2']['1']['1']['1']['3']['1']
+    else:
+        configs = message['1']['3']['1']
+
+    if isinstance(configs, list):
+        for config in configs:
+            attr_key = config['1']
+            value_key = list(config['2'].keys())[0]
+            if attr_key in list(changes.keys()):
+                config['2'][value_key] = changes[attr_key]
+            elif attr_key in changes_del:
+                configs.remove(config)
+
+        if bootstrap:
+            message['2']['1']['1']['1']['3']['1'] = configs
+        else:
+            message['1']['3']['1'] = configs
+        return blackboxprotobuf.encode_message(message, typedef)
+    return None
+
 
 def verify_callback(conn, cert, error_n, error_depth, return_code) -> bool:
     ctx = conn.get_context()
@@ -229,16 +291,42 @@ class GithubHosts(TlsConfig):
             if not (req_path.startswith("/recaptcha/") or
                     req_path.startswith("/js/")):
                 flow.response = Response.make(404)
-        # spotify ads and trackers
         elif req_host_header == "spclient.wg.spotify.com":
+            # spotify ads and trackers
             if (req_path.startswith("/ads/") or
                     req_path.startswith("/ad-logic/") or
                     req_path.startswith("/desktop-update/") or
                     req_path.startswith("/gabo-receiver-service/")):
                 flow.response = Response.make(503)
+            # spotify protobuf
+            if (req_path.startswith("/user-customization-service/v1/customize")
+                    or req_path.startswith("/bootstrap/v1/bootstrap")):
+                if 'if-none-match' in flow.request.headers:
+                    del flow.request.headers['if-none-match']
 
     def responseheaders(self, flow: HTTPFlow) -> None:
         flow.response.stream = True
+        req_path = flow.request.path
+        if (req_path.startswith("/user-customization-service/v1/customize")
+                or req_path.startswith("/bootstrap/v1/bootstrap")):
+            flow.response.stream = False
+
+    def response(self, flow: HTTPFlow) -> None:
+        req_path = flow.request.path
+        if flow.request.host_header == "spclient.wg.spotify.com":
+            if (req_path.startswith("/user-customization-service/v1/customize")
+                    or req_path.startswith("/bootstrap/v1/bootstrap")):
+                if flow.response.status_code != 200:
+                    return
+                if not isinstance(flow.response.content, bytes):
+                    return
+                logging.info(f"xxxxxxxx-spotify-protobuf-xxxxxxxx")
+                if req_path.startswith("/bootstrap/v1/bootstrap"):
+                    data = modify_spotify_body(flow.response.content, bootstrap=True)
+                else:
+                    data = modify_spotify_body(flow.response.content)
+                if data is not None:
+                    flow.response.content = data
 
     def _load_github_hosts(self) -> None:
         host_mappings: dict[str, Mapping] = {}

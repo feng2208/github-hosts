@@ -61,6 +61,11 @@ github_hosts = {
       "patterns": [
         "accounts.spotify.com",
         "www.spotify.com",
+      ],
+      "address": ("138.2.35.57", 443),
+    },
+    {
+      "patterns": [
         "spclient.wg.spotify.com",
       ],
       "sni": "www.spotify.com",
@@ -161,11 +166,18 @@ import sys
 _BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, _BASE_DIR + "/lib/")
 import blackboxprotobuf
+from blackboxprotobuf.lib.exceptions import BlackboxProtobufException
 
 
 # spotify ptotobuf
 def modify_spotify_body(data, bootstrap=False):
-    message, typedef = blackboxprotobuf.decode_message(data)
+    try:
+        logging.info(f"xxxxxxxx-spotify-protobuf-decode-xxxxxxxx")
+        message, typedef = blackboxprotobuf.decode_message(data)
+    except BlackboxProtobufException:
+        logging.info(f"xxxxxxxx-spotify-protobuf-decode-Error-xxxxxxxx")
+        return None
+        
     if bootstrap:
         configs = message['2']['1']['1']['1']['3']['1']
     else:
@@ -184,7 +196,13 @@ def modify_spotify_body(data, bootstrap=False):
             message['2']['1']['1']['1']['3']['1'] = configs
         else:
             message['1']['3']['1'] = configs
-        return blackboxprotobuf.encode_message(message, typedef)
+
+        try:
+            logging.info(f"xxxxxxxx-spotify-protobuf-encode-xxxxxxxx")
+            data = blackboxprotobuf.encode_message(message, typedef)
+            return data
+        except BlackboxProtobufException:
+            logging.info(f"xxxxxxxx-spotify-protobuf-encode-Error-xxxxxxxx")
     return None
 
 
@@ -257,16 +275,17 @@ class GithubHosts(TlsConfig):
         host = data.context.client.sni
         if host is None:
             return
-        logging.info(f"xxxxxxxx-tls-server-host: {host}")
 
         # apple app store region
         if host.endswith(apple_region['host']):
             data.context.server.address = apple_region['address']
+            logging.info(f"xxxxxxxx-apple-region-host: {host}")
             logging.info(f"xxxxxxxx-apple-region-address: {apple_region['address']}")
             return
 
         mapping = self._get_sni(host)
         if mapping is not None:
+            logging.info(f"xxxxxxxx-tls-server-host: {host}")
             if mapping.sni is not None:
                 data.ignore_connection = False
                 data.context.server.sni = mapping.sni
@@ -317,13 +336,15 @@ class GithubHosts(TlsConfig):
             if (req_path.startswith("/user-customization-service/v1/customize")
                     or req_path.startswith("/bootstrap/v1/bootstrap")):
                 if flow.response.status_code != 200:
+                    logging.info(f"xxxxxxxx-spotify-protobuf-status-code-not200-xxxxxxxx")
                     return
                 if not isinstance(flow.response.content, bytes):
                     return
-                logging.info(f"xxxxxxxx-spotify-protobuf-xxxxxxxx")
                 if req_path.startswith("/bootstrap/v1/bootstrap"):
+                    logging.info(f"xxxxxxxx-spotify-protobuf-bootstrap-xxxxxxxx")
                     data = modify_spotify_body(flow.response.content, bootstrap=True)
                 else:
+                    logging.info(f"xxxxxxxx-spotify-protobuf-customize-xxxxxxxx")
                     data = modify_spotify_body(flow.response.content)
                 if data is not None:
                     flow.response.content = data

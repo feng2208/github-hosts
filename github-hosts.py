@@ -71,18 +71,6 @@ github_hosts = {
       "sni": "www.spotify.com",
       "address": ("138.2.35.57", 443),
     },
-    {
-      "patterns": [
-        "spotify.com",
-        "clienttoken.spotify.com",
-        "apresolve.spotify.com",
-        "login5.spotify.com",
-        "api-partner.spotify.com",
-        "challenge.spotify.com",
-        "api.spotify.com",
-      ],
-      "address": ("gae2-spclient.spotify.com", 443),
-    },
     # spotify ads and trackers
     {
       "patterns": [
@@ -114,8 +102,8 @@ github_hosts = {
   ]
 }
 
-# spotify vip
-changes = {
+# spotify
+spots = {
     'player-license': 'premium',
     'streaming-rules': '',
     'financial-product': 'pr:premium,tc:0',
@@ -136,7 +124,7 @@ changes = {
     'com.spotify.madprops.use.ucs.product.state': 1,
 }
 
-changes_del = [
+spots_del = [
     'ad-use-adlogic',
     'ad-catalogues',
 ]
@@ -177,32 +165,51 @@ def modify_spotify_body(data, bootstrap=False):
     except BlackboxProtobufException:
         logging.info(f"xxxxxxxx-spotify-protobuf-decode-Error-xxxxxxxx")
         return None
-        
+
     if bootstrap:
         configs = message['2']['1']['1']['1']['3']['1']
     else:
         configs = message['1']['3']['1']
 
+    changed = False
     if isinstance(configs, list):
         for config in configs:
+            # config: {'1': 'attr_key', '2': {'value_key': 'value'}}
+            # spots: {'attr_key': 'value'}
+            if not isinstance(config, dict):
+                continue
+            if '1' not in config or '2' not in config:
+                continue
+            if not isinstance(config['2'], dict):
+                continue
+
             attr_key = config['1']
             value_key = list(config['2'].keys())[0]
-            if attr_key in list(changes.keys()):
-                config['2'][value_key] = changes[attr_key]
-            elif attr_key in changes_del:
+            if attr_key in spots:
+                config['2'][value_key] = spots[attr_key]
+                changed = True
+            elif attr_key in spots_del:
                 configs.remove(config)
+                changed = True
 
         if bootstrap:
             message['2']['1']['1']['1']['3']['1'] = configs
         else:
             message['1']['3']['1'] = configs
 
-        try:
-            logging.info(f"xxxxxxxx-spotify-protobuf-encode-xxxxxxxx")
-            data = blackboxprotobuf.encode_message(message, typedef)
-            return data
-        except BlackboxProtobufException:
-            logging.info(f"xxxxxxxx-spotify-protobuf-encode-Error-xxxxxxxx")
+        if changed:
+            logging.info(f"xxxxxxxx-spotify-protobuf-changed-xxxxxxxx")
+            try:
+                logging.info(f"xxxxxxxx-spotify-protobuf-encode-xxxxxxxx")
+                data = blackboxprotobuf.encode_message(message, typedef)
+                return data
+            except BlackboxProtobufException:
+                logging.info(f"xxxxxxxx-spotify-protobuf-encode-Error-xxxxxxxx")
+
+    if not changed:
+        logging.info(f"xxxxxxxx-spotify-protobuf-not-changed-xxxxxxxx")
+        logging.info(f"xxxxxxxx-spotify-protobuf-need-to-update-code-xxxxxxxx")
+
     return None
 
 

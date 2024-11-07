@@ -25,7 +25,7 @@
 ```
 
 
-## 加速其他网站
+## spotify
 1. [安装mitmproxy](https://mitmproxy.org/)
 2. [下载github-hosts](https://github.com/feng2208/github-hosts/archive/refs/heads/main.zip) 并解压
 3. 双击运行`github-hosts.bat`打开代理

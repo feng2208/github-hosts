@@ -39,6 +39,12 @@ github_hosts = {
       "address": ("199.232.176.133", 443),
     },
     ### spotify
+    {
+      "patterns": [
+        "download.scdn.co",
+      ],
+      "address": ("146.75.70.248", 443),
+    },
     # spotify recaptcha
     {
       "patterns": [

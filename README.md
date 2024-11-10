@@ -17,9 +17,8 @@
 
 
 ## Spotify
-1. [安装mitmproxy](https://mitmproxy.org/)
-2. [下载github-hosts](https://github.com/feng2208/github-hosts/archive/refs/heads/main.zip) 并解压
-3. 双击运行`github-hosts.bat`打开代理
-4. 以管理员身份运行`install-CA.bat`信任证书
-5. 设置浏览器或其他程序使用http代理 `127.0.0.1:8180`
+1. [下载github-hosts](https://github.com/feng2208/github-hosts/archive/refs/heads/main.zip) 并解压
+2. 双击运行`github-hosts.bat`打开代理
+3. 以管理员身份运行`install-CA.bat`信任证书
+4. 设置浏览器或其他程序使用http代理 `127.0.0.1:8180`
 

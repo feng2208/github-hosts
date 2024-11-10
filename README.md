@@ -1,7 +1,7 @@
 # github-hosts
 
 - [加速github](https://github.com/feng2208/github-hosts)([mirror](https://gh.feng2208.gleeze.com/))
-- [国内注册使用spotify](https://feng2208.gleeze.com/posts/spotify.html)，无广告无14天限制，可以任意切歌。
+- [国内注册使用spotify](https://feng2208.pages.dev/posts/spotify)，无广告无14天限制，可以任意切歌。
 
 
 
@@ -18,7 +18,7 @@
 
 ## Spotify
 1. [下载github-hosts](https://github.com/feng2208/github-hosts/archive/refs/heads/main.zip) 并解压
-2. 双击运行`github-hosts.bat`打开代理
+2. 双击`github-hosts.bat`打开代理
 3. 以管理员身份运行`install-CA.bat`信任证书
 4. 设置浏览器或其他程序使用http代理 `127.0.0.1:8180`
 

@@ -16,7 +16,7 @@
 
 
 
-## Spotify
+## http代理
 1. [下载github-hosts](https://github.com/feng2208/github-hosts/archive/refs/heads/main.zip) 并解压
 2. 双击`github-hosts.bat`打开代理
 3. 以管理员身份运行`install-CA.bat`信任证书

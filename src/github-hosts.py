@@ -262,6 +262,7 @@ class GithubHosts(TlsConfig):
             tls_start.ssl_conn.set_verify(SSL.VERIFY_PEER, verify_callback)
 
     def requestheaders(self, flow: HTTPFlow) -> None:
+        flow.request.stream = True
         req_path = flow.request.path
         req_host = flow.request.host_header          
         # spotify recaptcha
@@ -274,11 +275,18 @@ class GithubHosts(TlsConfig):
                     or req_path.startswith("/ad-logic/")
                     or req_path.startswith("/desktop-update/")
                     or req_path.startswith("/gabo-receiver-service/")):
+                flow.request.stream = False
                 flow.response = Response.make(503)
             # spotify protobuf
             elif self._spclient(flow):
                 if 'if-none-match' in flow.request.headers:
                     del flow.request.headers['if-none-match']
+
+    def responseheaders(self, flow: HTTPFlow) -> None:
+        flow.response.stream = True
+        if (self._spclient(flow)
+                or flow.request.host_header == "www.recaptcha.net"):
+            flow.response.stream = False
 
     def response(self, flow: HTTPFlow) -> None:
         req_path = flow.request.path

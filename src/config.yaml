@@ -1,0 +1,49 @@
+---
+# https://github.com/feng2208/github-hosts
+
+# mappings:
+# - hosts:
+#     - example.com
+#     - "*.example.com"  # 所有子域名
+#   sni: sni.example.com
+#   address: 100.1.1.1:443
+#   verify_host: real.example.com  # 当sni为假域名时，用来验证服务器证书。
+
+
+# spotify
+spotify_hosts:
+  - accounts.spotify.com
+  - www.spotify.com
+  - spclient.wg.spotify.com
+
+spotify_address: 138.2.35.57:443
+
+
+mappings:
+
+### github
+- hosts:
+    - github.com
+  sni: octocaptcha.com
+  address: 20.27.177.113:443
+
+- hosts:
+    - github.githubassets.com
+  sni: yelp.com
+  address: 199.232.240.116:443
+
+- hosts:
+    - "*.githubusercontent.com"
+  sni: githubusercontent.com
+  address: 199.232.176.133:443
+
+
+### spotify
+- hosts:
+    - download.scdn.co
+  address: 146.75.70.248:443
+
+- hosts:
+    - www.google.com
+  sni: www.recaptcha.net
+

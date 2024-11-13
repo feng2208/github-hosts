@@ -1,69 +1,40 @@
 # https://github.com/feng2208/github-hosts
 
-# mitmdump -s github-hosts.py -p 8080 
-
-# "patterns": [
-#     "example.com",
-#     "*.example.com", # all subdomains
-#  ],
-# "sni": "",
-# "address": ("ip", port),
-# "verify_host": "", # use to verify server cert
-
-# blackboxprotobuf version: 1.4.0 https://github.com/nccgroup/blackboxprotobuf
-# six version: 1.16.0 https://github.com/benjaminp/six
+# mitmdump -s src/github-hosts.py -p 8180 
+# deps:
+#   blackboxprotobuf v1.4.0 https://github.com/nccgroup/blackboxprotobuf
+#   six v1.16.0 https://github.com/benjaminp/six
 
 
-github_hosts = {
-  "mappings": [
-    ### github
-    {
-      "patterns": [
-        "github.com",
-      ],
-      "sni": "octocaptcha.com",
-      "address": ("20.27.177.113", 443),
-    },
-    {
-      "patterns": [
-        "github.githubassets.com",
-      ],
-      "sni": "yelp.com",
-      "address": ("199.232.240.116", 443),
-    },
-    {
-      "patterns": [
-        "*.githubusercontent.com",
-      ],
-      "sni": "githubusercontent.com",
-      "address": ("199.232.176.133", 443),
-    },
-    ### spotify
-    {
-      "patterns": [
-        "download.scdn.co",
-      ],
-      "address": ("146.75.70.248", 443),
-    },
-    # spotify recaptcha
-    {
-      "patterns": [
-        "www.google.com",
-      ],
-      "sni": "www.recaptcha.net",
-    },
-  ]
-}
+import logging
+from dataclasses import dataclass
 
-# spotify
-spotify = [
-    "accounts.spotify.com",
-    "www.spotify.com",
-    "spclient.wg.spotify.com",
-]
-spotify_address = ("138.2.35.57", 443)
+from mitmproxy.addonmanager import Loader
+from mitmproxy.http import HTTPFlow
+from mitmproxy.http import Response
+from mitmproxy import tls
+from mitmproxy.addons.tlsconfig import TlsConfig
 
-spots = {
+from OpenSSL import SSL
+from OpenSSL.crypto import X509StoreContext
+from OpenSSL.crypto import X509StoreContextError
+from cryptography import x509
+
+import os
+import sys
+SRC_DIR = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, SRC_DIR + "/lib/")
+import blackboxprotobuf
+from blackboxprotobuf.lib.exceptions import BlackboxProtobufException
+
+from pathlib import Path
+from ruamel.yaml import YAML
+
+
+CONFIG_FILE = SRC_DIR + "/config.yaml"
+SSL_VERIFY_HOSTS: dict = {}
+
+SPOTS = {
     'player-license': 'premium',
     'streaming-rules': '',
     'financial-product': 'pr:premium,tc:0',
@@ -84,35 +55,10 @@ spots = {
     'com.spotify.madprops.use.ucs.product.state': 1,
 }
 
-spots_del = [
+SPOTS_DEL = [
     'ad-use-adlogic',
     'ad-catalogues',
 ]
-
-
-ssl_verify_hosts: dict = {}
-
-
-import logging
-from dataclasses import dataclass
-
-from mitmproxy.addonmanager import Loader
-from mitmproxy.http import HTTPFlow
-from mitmproxy.http import Response
-from mitmproxy import tls
-from mitmproxy.addons.tlsconfig import TlsConfig
-
-from OpenSSL import SSL
-from OpenSSL.crypto import X509StoreContext
-from OpenSSL.crypto import X509StoreContextError
-from cryptography import x509
-
-import os
-import sys
-_BASE_DIR = os.path.dirname(os.path.realpath(__file__))
-sys.path.insert(0, _BASE_DIR + "/lib/")
-import blackboxprotobuf
-from blackboxprotobuf.lib.exceptions import BlackboxProtobufException
 
 
 # spotify ptotobuf
@@ -133,7 +79,7 @@ def modify_spotify_body(data, bootstrap=False):
     if isinstance(configs, list):
         for config in configs:
             # config: {'1': 'attr_key', '2': {'value_key': 'value'}}
-            # spots: {'attr_key': 'value'}
+            # SPOTS: {'attr_key': 'value'}
             if not isinstance(config, dict):
                 continue
             if '1' not in config or '2' not in config:
@@ -143,10 +89,10 @@ def modify_spotify_body(data, bootstrap=False):
 
             attr_key = config['1']
             value_key = list(config['2'].keys())[0]
-            if attr_key in spots:
-                config['2'][value_key] = spots[attr_key]
+            if attr_key in SPOTS:
+                config['2'][value_key] = SPOTS[attr_key]
                 changed = True
-            elif attr_key in spots_del:
+            elif attr_key in SPOTS_DEL:
                 configs.remove(config)
                 changed = True
 
@@ -185,7 +131,7 @@ def verify_callback(conn, cert, error_n, error_depth, return_code) -> bool:
     if cert_chain[0].get_serial_number() == cert.get_serial_number():
         crypto_cert = cert.to_cryptography()
         ext = crypto_cert.extensions.get_extension_for_class(x509.SubjectAlternativeName)
-        if ssl_verify_hosts[host] not in ext.value.get_values_for_type(x509.DNSName):
+        if SSL_VERIFY_HOSTS[host] not in ext.value.get_values_for_type(x509.DNSName):
             return False
     return True
 
@@ -204,12 +150,14 @@ class GithubHosts(TlsConfig):
 
     github_hosts_loaded: bool
     spotify_auth: bool
+    yaml_config: dict
 
     def __init__(self) -> None:
         self.host_mappings = {}
         self.star_mappings = {}
         self.github_hosts_loaded = False
         self.spotify_auth = False
+        self.yaml_config = {}
 
     def load(self, loader: Loader) -> None:
         loader.add_option(
@@ -227,20 +175,22 @@ class GithubHosts(TlsConfig):
 
     def running(self):
         if not self.github_hosts_loaded:
+            yaml = YAML(typ='safe')
+            self.yaml_config = yaml.load(Path(CONFIG_FILE))
             self._load_github_hosts()
             self.github_hosts_loaded = True
 
     def tls_clienthello(self, data: tls.ClientHelloData) -> None:
         data.ignore_connection = True
         host = data.context.client.sni
-        if host in spotify:
+        if host in self.yaml_config['spotify_hosts']:
             if host == "spclient.wg.spotify.com":
                 data.ignore_connection = False
                 if self.spotify_auth:
-                    data.context.server.address = spotify_address
+                    data.context.server.address = self.yaml_config['spotify_address']
             else:
-                data.context.server.address = spotify_address
-                self.spotify_auth = True                    
+                data.context.server.address = self.yaml_config['spotify_address']
+                self.spotify_auth = True
             logging.info(f"xxxxxxxx-tls-server-host: {host}")
             logging.info(f"xxxxxxxx-tls-server-address: {data.context.server.address}")
             return
@@ -258,7 +208,7 @@ class GithubHosts(TlsConfig):
 
     def tls_start_server(self, tls_start: tls.TlsData) -> None:
         super().tls_start_server(tls_start)
-        if tls_start.conn.sni in ssl_verify_hosts:
+        if tls_start.conn.sni in SSL_VERIFY_HOSTS:
             tls_start.ssl_conn.set_verify(SSL.VERIFY_PEER, verify_callback)
 
     def requestheaders(self, flow: HTTPFlow) -> None:
@@ -329,22 +279,24 @@ class GithubHosts(TlsConfig):
         host_mappings: dict[str, Mapping] = {}
         star_mappings: dict[str, Mapping] = {}
 
-        for mapping in github_hosts["mappings"]:
+        for mapping in self.yaml_config["mappings"]:
             address = mapping.get("address")
             sni = mapping.get("sni")
             verify_host = mapping.get("verify_host")
             if verify_host is not None and sni is not None:
-                ssl_verify_hosts[sni] = verify_host
+                SSL_VERIFY_HOSTS[sni] = verify_host
+            if address is not None:
+                address = (address.split(':')[0], int(address.split(':')[1]))
 
             item = Mapping(
                         sni=sni,
                         address=address,
                    )
-            for pattern in mapping["patterns"]:
-                if pattern.startswith("*."):
-                    star_mappings[pattern[2:]] = item
+            for host in mapping["hosts"]:
+                if host.startswith("*."):
+                    star_mappings[host[2:]] = item
                 else:
-                    host_mappings[pattern] = item
+                    host_mappings[host] = item
 
         self.host_mappings = host_mappings
         self.star_mappings = star_mappings

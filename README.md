@@ -28,5 +28,6 @@
 1. [下载github-hosts](https://github.com/feng2208/github-hosts/archive/refs/heads/main.zip) 并解压
 2. 双击`github-hosts.bat`打开代理
 3. 以管理员身份运行`install-CA.bat`信任证书
-4. 设置浏览器或其他程序使用http代理 `127.0.0.1:8180`
+4. 运行`set-proxy.bat`和`unset-proxy.bat`设置或取消系统代理
+5. 不使用系统代理的程序自行设置 `127.0.0.1:8180`
 

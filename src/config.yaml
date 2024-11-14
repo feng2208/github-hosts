@@ -16,7 +16,7 @@ spotify_hosts:
   - www.spotify.com
   - spclient.wg.spotify.com
 
-spotify_address: 138.2.35.57:443
+spotify_address: 35.196.128.213:40129
 
 
 mappings:

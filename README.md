@@ -1,6 +1,6 @@
 # github-hosts
 
-- [加速github](https://github.com/feng2208/github-hosts)([mirror](https://gh.feng2208.gleeze.com/))
+- [加速github](https://github.com/feng2208/github-hosts)([mirror](https://feng2208.pages.dev/github-hosts))
 - [国内注册使用spotify](https://feng2208.pages.dev/posts/spotify)，无广告无14天限制，可以任意切歌。
 
 

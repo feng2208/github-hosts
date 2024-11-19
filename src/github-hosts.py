@@ -184,12 +184,14 @@ class GithubHosts(TlsConfig):
         data.ignore_connection = True
         host = data.context.client.sni
         if host in self.yaml_config['spotify_hosts']:
+            _addr = self.yaml_config['spotify_address']
+            _spot_addr = (_addr.split(':')[0], int(_addr.split(':')[1]))
             if host == "spclient.wg.spotify.com":
                 data.ignore_connection = False
                 if self.spotify_auth:
-                    data.context.server.address = self.yaml_config['spotify_address']
+                    data.context.server.address = _spot_addr
             else:
-                data.context.server.address = self.yaml_config['spotify_address']
+                data.context.server.address = _spot_addr
                 self.spotify_auth = True
             logging.info(f"xxxxxxxx-tls-server-host: {host}")
             logging.info(f"xxxxxxxx-tls-server-address: {data.context.server.address}")

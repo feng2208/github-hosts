@@ -16,7 +16,7 @@ spotify_hosts:
   - www.spotify.com
   - spclient.wg.spotify.com
 
-spotify_address: 35.196.128.213:40129
+spotify_address: 199.193.127.138:33932
 
 
 mappings:
@@ -47,3 +47,8 @@ mappings:
     - www.google.com
   sni: www.recaptcha.net
 
+- hosts:
+    - open.spotify.com
+  sni: s.sni-810-default.ssl.fastly.net
+  address: 167.82.43.42:443
+  

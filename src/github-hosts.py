@@ -121,7 +121,6 @@ def verify_callback(conn, cert, error_n, error_depth, return_code) -> bool:
     ctx = conn.get_context()
     store = ctx.get_cert_store()
     cert_chain = conn.get_peer_cert_chain()
-    host = conn.get_servername().decode("utf-8")
 
     try:
         X509StoreContext(store, cert, cert_chain).verify_certificate()
@@ -131,7 +130,7 @@ def verify_callback(conn, cert, error_n, error_depth, return_code) -> bool:
     if cert_chain[0].get_serial_number() == cert.get_serial_number():
         crypto_cert = cert.to_cryptography()
         ext = crypto_cert.extensions.get_extension_for_class(x509.SubjectAlternativeName)
-        if SSL_VERIFY_HOSTS[host] not in ext.value.get_values_for_type(x509.DNSName):
+        if SSL_VERIFY_HOSTS[conn.verify_key] not in ext.value.get_values_for_type(x509.DNSName):
             return False
     return True
 
@@ -211,6 +210,8 @@ class GithubHosts(TlsConfig):
     def tls_start_server(self, tls_start: tls.TlsData) -> None:
         super().tls_start_server(tls_start)
         if tls_start.conn.sni in SSL_VERIFY_HOSTS:
+            tls_start.ssl_conn.set_tlsext_host_name(b"")
+            tls_start.ssl_conn.verify_key = tls_start.conn.sni
             tls_start.ssl_conn.set_verify(SSL.VERIFY_PEER, verify_callback)
 
     def requestheaders(self, flow: HTTPFlow) -> None:

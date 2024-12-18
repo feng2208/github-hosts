@@ -210,7 +210,8 @@ class GithubHosts(TlsConfig):
     def tls_start_server(self, tls_start: tls.TlsData) -> None:
         super().tls_start_server(tls_start)
         if tls_start.conn.sni in SSL_VERIFY_HOSTS:
-            tls_start.ssl_conn.set_tlsext_host_name(b"")
+            if tls_start.conn.sni.startswith("_"):
+                tls_start.ssl_conn.set_tlsext_host_name(b"")
             tls_start.ssl_conn.verify_key = tls_start.conn.sni
             tls_start.ssl_conn.set_verify(SSL.VERIFY_PEER, verify_callback)
 

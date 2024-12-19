@@ -4,10 +4,10 @@
 # mappings:
 # - hosts:
 #     - example.com
-#     - "*.example.com"  # 所有子域名
+#     - "*.example.com" # 所有子域名
 #   sni: sni.example.com
 #   address: 100.1.1.1:443
-#   verify_host: real.example.com # 用来验证服务器证书，同时需要设置sni。如果sni以下划线开头（如：_example），则只作为标识不可重复，也不发送到服务器。
+# sni 和 hosts 都会用来验证服务器证书，如果 sni 以下划线开头(如：_example.com)，则 sni 不会被发送。
 
 
 # spotify

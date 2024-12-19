@@ -29,10 +29,9 @@ from blackboxprotobuf.lib.exceptions import BlackboxProtobufException
 
 from pathlib import Path
 from ruamel.yaml import YAML
-
+import re
 
 CONFIG_FILE = SRC_DIR + "/config.yaml"
-SSL_VERIFY_HOSTS: dict = {}
 
 SPOTS = {
     'player-license': 'premium',
@@ -118,10 +117,12 @@ def modify_spotify_body(data, bootstrap=False):
 
 
 def verify_callback(conn, cert, error_n, error_depth, return_code) -> bool:
+    if return_code == 1:
+        return True
+
     ctx = conn.get_context()
     store = ctx.get_cert_store()
     cert_chain = conn.get_peer_cert_chain()
-
     try:
         X509StoreContext(store, cert, cert_chain).verify_certificate()
     except X509StoreContextError:
@@ -130,8 +131,12 @@ def verify_callback(conn, cert, error_n, error_depth, return_code) -> bool:
     if cert_chain[0].get_serial_number() == cert.get_serial_number():
         crypto_cert = cert.to_cryptography()
         ext = crypto_cert.extensions.get_extension_for_class(x509.SubjectAlternativeName)
-        if SSL_VERIFY_HOSTS[conn.verify_key] not in ext.value.get_values_for_type(x509.DNSName):
-            return False
+        dns_names = ext.value.get_values_for_type(x509.DNSName)
+        if conn.verify_host1 not in dns_names and conn.verify_host2 not in dns_names:
+            n_host1 = re.sub(r'^\w+\.', '*.', conn.verify_host1)
+            n_host2 = re.sub(r'^\w+\.', '*.', conn.verify_host2)
+            if n_host1 not in dns_names and n_host2 not in dns_names:
+                return False
     return True
 
 
@@ -183,14 +188,14 @@ class GithubHosts(TlsConfig):
         data.ignore_connection = True
         host = data.context.client.sni
         if host in self.yaml_config['spotify_hosts']:
-            _addr = self.yaml_config['spotify_address']
-            _spot_addr = (_addr.split(':')[0], int(_addr.split(':')[1]))
+            _spot_addr = self.yaml_config['spotify_address']
+            spot_addr = (_spot_addr.split(':')[0], int(_spot_addr.split(':')[1]))
             if host == "spclient.wg.spotify.com":
                 data.ignore_connection = False
                 if self.spotify_auth:
-                    data.context.server.address = _spot_addr
+                    data.context.server.address = spot_addr
             else:
-                data.context.server.address = _spot_addr
+                data.context.server.address = spot_addr
                 self.spotify_auth = True
             logging.info(f"xxxxxxxx-tls-server-host: {host}")
             logging.info(f"xxxxxxxx-tls-server-address: {data.context.server.address}")
@@ -209,11 +214,12 @@ class GithubHosts(TlsConfig):
 
     def tls_start_server(self, tls_start: tls.TlsData) -> None:
         super().tls_start_server(tls_start)
-        if tls_start.conn.sni in SSL_VERIFY_HOSTS:
-            if tls_start.conn.sni.startswith("_"):
-                tls_start.ssl_conn.set_tlsext_host_name(b"")
-            tls_start.ssl_conn.verify_key = tls_start.conn.sni
-            tls_start.ssl_conn.set_verify(SSL.VERIFY_PEER, verify_callback)
+        tls_start.ssl_conn.verify_host1 = tls_start.conn.sni
+        tls_start.ssl_conn.verify_host2 = tls_start.context.client.sni
+        if tls_start.conn.sni.startswith("_"):
+            tls_start.ssl_conn.set_tlsext_host_name(b"")
+            tls_start.ssl_conn.verify_host1 = tls_start.conn.sni[1:]
+        tls_start.ssl_conn.set_verify(SSL.VERIFY_PEER, verify_callback)
 
     def requestheaders(self, flow: HTTPFlow) -> None:
         flow.request.stream = True
@@ -286,9 +292,6 @@ class GithubHosts(TlsConfig):
         for mapping in self.yaml_config["mappings"]:
             address = mapping.get("address")
             sni = mapping.get("sni")
-            verify_host = mapping.get("verify_host")
-            if verify_host is not None and sni is not None:
-                SSL_VERIFY_HOSTS[sni] = verify_host
             if address is not None:
                 address = (address.split(':')[0], int(address.split(':')[1]))
 

@@ -46,6 +46,7 @@ mappings:
 - hosts:
     - www.google.com
   sni: www.recaptcha.net
+  address: 126.6.255.92:18179
 
 - hosts:
     - open.spotify.com

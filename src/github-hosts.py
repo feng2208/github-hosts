@@ -225,11 +225,7 @@ class GithubHosts(TlsConfig):
         flow.request.stream = True
         req_path = flow.request.path
         req_host = flow.request.host_header          
-        # spotify recaptcha
-        if req_host == "www.google.com":
-            flow.request.host = "www.recaptcha.net"
-                
-        elif req_host == "spclient.wg.spotify.com":
+        if req_host == "spclient.wg.spotify.com":
             # spotify ads and trackers
             if (req_path.startswith("/ads/")
                     or req_path.startswith("/ad-logic/")
@@ -244,23 +240,13 @@ class GithubHosts(TlsConfig):
 
     def responseheaders(self, flow: HTTPFlow) -> None:
         flow.response.stream = True
-        if (self._spclient(flow)
-                or flow.request.host_header == "www.recaptcha.net"):
+        if self._spclient(flow):
             flow.response.stream = False
 
     def response(self, flow: HTTPFlow) -> None:
         req_path = flow.request.path
         req_host = flow.request.host_header
-        if (req_host == "www.recaptcha.net"
-                and req_path.startswith("/recaptcha/")):
-            replacements = [
-                ("www.gstatic.cn", "www.gstatic.com"),
-                ("www.recaptcha.net", "www.google.com"),
-            ]
-            for old, new in replacements:
-                flow.response.text = flow.response.text.replace(old, new)
-        
-        elif self._spclient(flow):
+        if self._spclient(flow):
             if flow.response.status_code != 200:
                 logging.info(f"xxxxxxxx-spotify-protobuf-status-code-not-200-xxxxxxxx")
                 return

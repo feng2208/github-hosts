@@ -51,5 +51,5 @@ mappings:
 - hosts:
     - open.spotify.com
   sni: s.sni-810-default.ssl.fastly.net
-  address: 167.82.43.42:443
+  address: 146.75.95.42:443
   

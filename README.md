@@ -6,15 +6,16 @@
 
 
 ## 加速github
+从`命令提示符`启动，在执行命令前**先关闭**浏览器。
+
 ### 谷歌浏览器
-
-从`命令提示符`启动：
-
 ```bat
 "C:\Program Files\Google\Chrome\Application\chrome.exe" --host-rules="MAP github.com octocaptcha.com, MAP github.githubassets.com yelp.com, MAP *.githubusercontent.com githubusercontent.com" --host-resolver-rules="MAP octocaptcha.com 20.27.177.113, MAP yelp.com 199.232.240.116, MAP githubusercontent.com 199.232.176.133"
 ```
 
 ### 微软Edge浏览器
+还要在浏览器`设置`-`系统和性能`关闭`启动增强`。
+
 ```bat
 "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --host-rules="MAP github.com octocaptcha.com, MAP github.githubassets.com yelp.com, MAP *.githubusercontent.com githubusercontent.com" --host-resolver-rules="MAP octocaptcha.com 20.27.177.113, MAP yelp.com 199.232.240.116, MAP githubusercontent.com 199.232.176.133"
 ```

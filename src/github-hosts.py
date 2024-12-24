@@ -14,6 +14,7 @@ from mitmproxy.http import HTTPFlow
 from mitmproxy.http import Response
 from mitmproxy import tls
 from mitmproxy.addons.tlsconfig import TlsConfig
+from mitmproxy.proxy.server_hooks import ServerConnectionHookData
 
 from OpenSSL import SSL
 from OpenSSL.crypto import X509StoreContext
@@ -220,6 +221,14 @@ class GithubHosts(TlsConfig):
             tls_start.ssl_conn.set_tlsext_host_name(b"")
             tls_start.ssl_conn.verify_host1 = tls_start.conn.sni[1:]
         tls_start.ssl_conn.set_verify(SSL.VERIFY_PEER, verify_callback)
+
+    def server_connect(self, data: ServerConnectionHookData) -> None:
+        _host = data.server.address[0]
+        if self.spotify_auth and _host in self.yaml_config['spotify_ap']:
+            host = self.yaml_config['spotify_ap_address'].split(':')[0]
+            port = int(self.yaml_config['spotify_ap_address'].split(':')[1])
+            data.server.address = (host, port)
+            logging.info(f"xxxxxxxx-spotify-ap: {_host} {data.server.address}")
 
     def requestheaders(self, flow: HTTPFlow) -> None:
         flow.request.stream = True

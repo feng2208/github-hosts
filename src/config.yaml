@@ -15,8 +15,16 @@ spotify_hosts:
   - accounts.spotify.com
   - www.spotify.com
   - spclient.wg.spotify.com
+spotify_address: 217.142.251.150:443
 
-spotify_address: 199.193.127.138:33932
+# https://apresolve.spotify.com/
+spotify_ap:
+  - ap-gue1.spotify.com
+  - ap-guc3.spotify.com
+  - ap-gew1.spotify.com
+  - ap-gew4.spotify.com
+  - ap-gae2.spotify.com
+spotify_ap_address: 217.142.251.150:443
 
 
 mappings:

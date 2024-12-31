@@ -54,4 +54,5 @@ mappings:
 - hosts:
     - www.google.com
   sni: www.recaptcha.net
-  address: 218.39.140.21:30008
+  address: 211.208.16.125:30020
+

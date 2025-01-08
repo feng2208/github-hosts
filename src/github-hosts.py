@@ -153,6 +153,8 @@ class GithubHosts(TlsConfig):
     # Configurations for star ("*.example.com") mappings:
     star_mappings: dict[str, Mapping]
 
+    tcp_hosts: list[str]
+
     github_hosts_loaded: bool
     spotify_auth: bool
     yaml_config: dict
@@ -160,11 +162,18 @@ class GithubHosts(TlsConfig):
     def __init__(self) -> None:
         self.host_mappings = {}
         self.star_mappings = {}
+        self.tcp_hosts = []
         self.github_hosts_loaded = False
         self.spotify_auth = False
         self.yaml_config = {}
 
     def load(self, loader: Loader) -> None:
+        if not self.github_hosts_loaded:
+            yaml = YAML(typ='safe')
+            self.yaml_config = yaml.load(Path(CONFIG_FILE))
+            self._load_github_hosts()
+            self.github_hosts_loaded = True
+
         loader.add_option(
             name="connection_strategy",
             typespec=str,
@@ -177,13 +186,12 @@ class GithubHosts(TlsConfig):
             default=True,
             help="Use the Host header to construct URLs for display",
         )
-
-    def running(self):
-        if not self.github_hosts_loaded:
-            yaml = YAML(typ='safe')
-            self.yaml_config = yaml.load(Path(CONFIG_FILE))
-            self._load_github_hosts()
-            self.github_hosts_loaded = True
+        loader.add_option(
+            name="tcp_hosts",
+            typespec=list,
+            default=self.tcp_hosts,
+            help="Generic TCP SSL proxy mode for all hosts that match the pattern",
+        )
 
     def tls_clienthello(self, data: tls.ClientHelloData) -> None:
         data.ignore_connection = True
@@ -283,6 +291,7 @@ class GithubHosts(TlsConfig):
     def _load_github_hosts(self) -> None:
         host_mappings: dict[str, Mapping] = {}
         star_mappings: dict[str, Mapping] = {}
+        tcp_hosts: list[str] = []
 
         for mapping in self.yaml_config["mappings"]:
             address = mapping.get("address")
@@ -297,11 +306,16 @@ class GithubHosts(TlsConfig):
             for host in mapping["hosts"]:
                 if host.startswith("*."):
                     star_mappings[host[2:]] = item
+                    if sni is not None:
+                        tcp_hosts.append(host[1:].replace('.', r'\.'))
                 else:
                     host_mappings[host] = item
+                    if sni is not None:
+                        tcp_hosts.append(host.replace('.', r'\.'))
 
         self.host_mappings = host_mappings
         self.star_mappings = star_mappings
+        self.tcp_hosts = tcp_hosts
 
     def _get_sni(self, host: str) -> Mapping | None:
         mapping = self.host_mappings.get(host)

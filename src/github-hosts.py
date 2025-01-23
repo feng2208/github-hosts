@@ -221,6 +221,12 @@ class GithubHosts(TlsConfig):
                 data.context.server.address = mapping.address
                 logging.info(f"xxxxxxxx-tls-server-address: {mapping.address}")
 
+        else:
+            s_host = data.context.server.address[0]
+            s_port = data.context.server.address[1]
+            c_port = data.context.client.peername[1]
+            logging.info(f"{c_port} server connect {s_host}:{s_port}")
+
     def tls_start_server(self, tls_start: tls.TlsData) -> None:
         super().tls_start_server(tls_start)
         tls_start.ssl_conn.verify_host1 = tls_start.conn.sni

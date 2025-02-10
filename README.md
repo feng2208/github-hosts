@@ -22,7 +22,7 @@
 
 
 ### git命令
-- 首先启动http代理
+- 首先运行`github-hosts.bat`
 - 设置`git`使用代理`git config --global http.proxy http://127.0.0.1:8180`
 - 使用`git`命令，类似：
   ```

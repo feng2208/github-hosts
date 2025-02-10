@@ -22,19 +22,11 @@
 
 
 ### git命令
-- 首先运行`github-hosts.bat`
+- [下载github-hosts](https://github.com/feng2208/github-hosts/archive/refs/heads/main.zip) 解压出来，运行`github-hosts.bat`
 - 设置`git`使用代理`git config --global http.proxy http://127.0.0.1:8180`
 - 使用`git`命令，类似：
   ```
   git -c http.sslVerify=false clone https://github.com/feng2208/github-hosts.git
   ```
 - 取消使用代理：`git config --global --unset http.proxy`
-
-
-## http代理
-1. [下载github-hosts](https://github.com/feng2208/github-hosts/archive/refs/heads/main.zip) 并解压
-2. 双击`github-hosts.bat`打开代理
-3. 以管理员身份运行`install-CA.bat`信任证书
-4. 运行`set-proxy.bat`和`unset-proxy.bat`设置或取消系统代理
-5. 不使用系统代理的程序自行设置 `127.0.0.1:8180`
 

@@ -37,13 +37,9 @@ mappings:
 
 - hosts:
     - github.githubassets.com
+    - "*.githubusercontent.com"
   sni: yelp.com
   address: 199.232.240.116:443
-
-- hosts:
-    - "*.githubusercontent.com"
-  sni: githubusercontent.com
-  address: 199.232.176.133:443
 
 
 ### spotify

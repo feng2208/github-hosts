@@ -260,6 +260,8 @@ class GithubHosts(TlsConfig):
             elif self._spclient(flow):
                 if 'if-none-match' in flow.request.headers:
                     del flow.request.headers['if-none-match']
+            elif (req_path.startswith("/artistview/v1/artist")):
+                flow.request.path = flow.request.path.replace('platform=iphone', 'platform=ipad')
 
     def responseheaders(self, flow: HTTPFlow) -> None:
         flow.response.stream = True

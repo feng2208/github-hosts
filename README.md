@@ -30,7 +30,7 @@ macOS
 - [下载github-hosts](https://github.com/feng2208/github-hosts/archive/refs/heads/main.zip) 解压，运行`github-hosts.bat`
 - 设置`git`使用代理
   ```
-  git config --global http.proxy http://127.0.0.1:8180`
+  git config --global http.proxy http://127.0.0.1:8180
   ```
 - 使用`git`命令，类似
   ```
@@ -38,6 +38,6 @@ macOS
   ```
 - 取消使用代理
   ```
-  git config --global --unset http.proxy`
+  git config --global --unset http.proxy
   ```
 

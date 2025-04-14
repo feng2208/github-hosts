@@ -1,8 +1,6 @@
 
-
-- [加速github](https://github.com/feng2208/github-hosts)([mirror](https://feng2208.pages.dev/github-hosts))
-- [国内注册使用spotify](https://feng2208.pages.dev/posts/spotify)，无广告可以任意切歌。
-
+- 加速github：https://github.com/feng2208/github-hosts
+- 镜像：https://feng2208.pages.dev/github-hosts
 
 
 ## 加速github
@@ -29,11 +27,17 @@ macOS
 
 
 ### git命令
-- [下载github-hosts](https://github.com/feng2208/github-hosts/archive/refs/heads/main.zip) 解压出来，运行`github-hosts.bat`
-- 设置`git`使用代理`git config --global http.proxy http://127.0.0.1:8180`
-- 使用`git`命令，类似：
+- [下载github-hosts](https://github.com/feng2208/github-hosts/archive/refs/heads/main.zip) 解压，运行`github-hosts.bat`
+- 设置`git`使用代理
+  ```
+  git config --global http.proxy http://127.0.0.1:8180`
+  ```
+- 使用`git`命令，类似
   ```
   git -c http.sslVerify=false clone https://github.com/feng2208/github-hosts.git
   ```
-- 取消使用代理：`git config --global --unset http.proxy`
+- 取消使用代理
+  ```
+  git config --global --unset http.proxy`
+  ```
 

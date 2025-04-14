@@ -1,122 +1,26 @@
 # https://github.com/feng2208/github-hosts
-
 # mitmdump -s src/github-hosts.py -p 8180 
-# deps:
-#   blackboxprotobuf v1.4.0 https://github.com/nccgroup/blackboxprotobuf
-#   six v1.16.0 https://github.com/benjaminp/six
 
 
 import logging
 from dataclasses import dataclass
 
 from mitmproxy.addonmanager import Loader
-from mitmproxy.http import HTTPFlow
-from mitmproxy.http import Response
 from mitmproxy import tls
 from mitmproxy.addons.tlsconfig import TlsConfig
-from mitmproxy.proxy.server_hooks import ServerConnectionHookData
 
 from OpenSSL import SSL
 from OpenSSL.crypto import X509StoreContext
 from OpenSSL.crypto import X509StoreContextError
 from cryptography import x509
 
-import os
-import sys
-SRC_DIR = os.path.dirname(os.path.realpath(__file__))
-sys.path.insert(0, SRC_DIR + "/lib/")
-import blackboxprotobuf
-from blackboxprotobuf.lib.exceptions import BlackboxProtobufException
-
 from pathlib import Path
 from ruamel.yaml import YAML
 import re
 
+import os
+SRC_DIR = os.path.dirname(os.path.realpath(__file__))
 CONFIG_FILE = SRC_DIR + "/config.yaml"
-
-SPOTS = {
-    'player-license': 'premium',
-    'streaming-rules': '',
-    'financial-product': 'pr:premium,tc:0',
-    'name': 'Spotify Premium',
-    'on-demand': 1,
-    'ads': 0,
-    'catalogue': 'premium',
-    'high-bitrate': 1,
-    'nft-disabled': '1',
-    'offline': 1,
-    'pause-after': 0,
-    'can_use_superbird': 1,
-    'type': 'premium',
-    'com.spotify.madprops.use.ucs.product.state': 1,
-    'com.spotify.madprops.delivered.by.ucs': 1,
-    'payments-initial-campaign': 'default',
-    'unrestricted': 1,
-    'shuffle-eligible': 1,
-    'social-session': 1,
-    'social-session-free-tier': 0,
-}
-
-SPOTS_DEL = [
-    'ad-use-adlogic',
-    'ad-catalogues',
-]
-
-
-# spotify ptotobuf
-def modify_spotify_body(data, bootstrap=False):
-    try:
-        logging.info(f"xxxxxxxx-spotify-protobuf-decode-xxxxxxxx")
-        message, typedef = blackboxprotobuf.decode_message(data)
-    except BlackboxProtobufException:
-        logging.info(f"xxxxxxxx-spotify-protobuf-decode-Error-xxxxxxxx")
-        return None
-
-    if bootstrap:
-        configs = message['2']['1']['1']['1']['3']['1']
-    else:
-        configs = message['1']['3']['1']
-
-    changed = False
-    if isinstance(configs, list):
-        for config in configs:
-            # config: {'1': 'attr_key', '2': {'value_key': 'value'}}
-            # SPOTS: {'attr_key': 'value'}
-            if not isinstance(config, dict):
-                continue
-            if '1' not in config or '2' not in config:
-                continue
-            if not isinstance(config['2'], dict):
-                continue
-
-            attr_key = config['1']
-            value_key = list(config['2'].keys())[0]
-            if attr_key in SPOTS:
-                config['2'][value_key] = SPOTS[attr_key]
-                changed = True
-            elif attr_key in SPOTS_DEL:
-                configs.remove(config)
-                changed = True
-
-        if bootstrap:
-            message['2']['1']['1']['1']['3']['1'] = configs
-        else:
-            message['1']['3']['1'] = configs
-
-        if changed:
-            logging.info(f"xxxxxxxx-spotify-protobuf-changed-xxxxxxxx")
-            try:
-                logging.info(f"xxxxxxxx-spotify-protobuf-encode-xxxxxxxx")
-                data = blackboxprotobuf.encode_message(message, typedef)
-                return data
-            except BlackboxProtobufException:
-                logging.info(f"xxxxxxxx-spotify-protobuf-encode-Error-xxxxxxxx")
-
-    if not changed:
-        logging.info(f"xxxxxxxx-spotify-protobuf-not-changed-xxxxxxxx")
-        logging.info(f"xxxxxxxx-spotify-protobuf-need-to-update-code-xxxxxxxx")
-
-    return None
 
 
 def verify_callback(conn, cert, error_n, error_depth, return_code) -> bool:
@@ -156,9 +60,7 @@ class GithubHosts(TlsConfig):
     star_mappings: dict[str, Mapping]
 
     tcp_hosts: list[str]
-
     github_hosts_loaded: bool
-    spotify_auth: bool
     yaml_config: dict
 
     def __init__(self) -> None:
@@ -166,7 +68,6 @@ class GithubHosts(TlsConfig):
         self.star_mappings = {}
         self.tcp_hosts = []
         self.github_hosts_loaded = False
-        self.spotify_auth = False
         self.yaml_config = {}
 
     def load(self, loader: Loader) -> None:
@@ -198,19 +99,6 @@ class GithubHosts(TlsConfig):
     def tls_clienthello(self, data: tls.ClientHelloData) -> None:
         data.ignore_connection = True
         host = data.context.client.sni
-        if host in self.yaml_config['spotify_hosts']:
-            _spot_addr = self.yaml_config['spotify_address']
-            spot_addr = (_spot_addr.split(':')[0], int(_spot_addr.split(':')[1]))
-            if host == "spclient.wg.spotify.com":
-                data.ignore_connection = False
-                if self.spotify_auth:
-                    data.context.server.address = spot_addr
-            else:
-                data.context.server.address = spot_addr
-                self.spotify_auth = True
-            logging.info(f"xxxxxxxx-tls-server-host: {host}")
-            logging.info(f"xxxxxxxx-tls-server-address: {data.context.server.address}")
-            return
 
         mapping = self._get_sni(host)
         if mapping is not None:
@@ -237,66 +125,6 @@ class GithubHosts(TlsConfig):
             tls_start.ssl_conn.set_tlsext_host_name(b"")
             tls_start.ssl_conn.verify_host1 = tls_start.conn.sni[1:]
         tls_start.ssl_conn.set_verify(SSL.VERIFY_PEER, verify_callback)
-
-    def server_connect(self, data: ServerConnectionHookData) -> None:
-        _host = data.server.address[0]
-        if self.spotify_auth and _host in self.yaml_config['spotify_ap']:
-            host = self.yaml_config['spotify_ap_address'].split(':')[0]
-            port = int(self.yaml_config['spotify_ap_address'].split(':')[1])
-            data.server.address = (host, port)
-            logging.info(f"xxxxxxxx-spotify-ap: {_host} {data.server.address}")
-
-    def requestheaders(self, flow: HTTPFlow) -> None:
-        flow.request.stream = True
-        req_path = flow.request.path
-        req_host = flow.request.host_header          
-        if req_host == "spclient.wg.spotify.com":
-            # spotify ads and trackers
-            if (req_path.startswith("/ads/")
-                    or req_path.startswith("/ad-logic/")
-                    or req_path.startswith("/desktop-update/")
-                    or req_path.startswith("/gabo-receiver-service/")):
-                flow.request.stream = False
-                flow.response = Response.make(503)
-            # spotify protobuf
-            elif self._spclient(flow):
-                if 'if-none-match' in flow.request.headers:
-                    del flow.request.headers['if-none-match']
-            elif (req_path.startswith("/artistview/v1/artist")):
-                flow.request.path = flow.request.path.replace('platform=iphone', 'platform=ipad')
-
-    def responseheaders(self, flow: HTTPFlow) -> None:
-        flow.response.stream = True
-        if self._spclient(flow):
-            flow.response.stream = False
-
-    def response(self, flow: HTTPFlow) -> None:
-        req_path = flow.request.path
-        req_host = flow.request.host_header
-        if self._spclient(flow):
-            if flow.response.status_code != 200:
-                logging.info(f"xxxxxxxx-spotify-protobuf-status-code-not-200-xxxxxxxx")
-                return
-            if not isinstance(flow.response.content, bytes):
-                logging.info(f"xxxxxxxx-spotify-protobuf-not-bytes-xxxxxxxx")
-                return
-            if req_path.startswith("/bootstrap/v1/bootstrap"):
-                logging.info(f"xxxxxxxx-spotify-protobuf-bootstrap-xxxxxxxx")
-                data = modify_spotify_body(flow.response.content, bootstrap=True)
-            else:
-                logging.info(f"xxxxxxxx-spotify-protobuf-customize-xxxxxxxx")
-                data = modify_spotify_body(flow.response.content)
-            if data is not None:
-                flow.response.content = data
-                    
-    def _spclient(self, flow: HTTPFlow) -> bool:
-        req_path = flow.request.path
-        req_host = flow.request.host_header
-        if req_host == "spclient.wg.spotify.com":
-            if (req_path.startswith("/user-customization-service/v1/customize")
-                    or req_path.startswith("/bootstrap/v1/bootstrap")):
-                return True
-        return False
         
     def _load_github_hosts(self) -> None:
         host_mappings: dict[str, Mapping] = {}

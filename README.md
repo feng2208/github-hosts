@@ -1,6 +1,6 @@
 
-- 加速github：https://github.com/feng2208/github-hosts
-- 镜像：https://feng2208.pages.dev/github-hosts
+- 加速 GitHub：https://github.com/feng2208/github-hosts
+- 备用：https://feng2208.pages.dev/github-hosts
 
 
 ## 加速github

@@ -11,15 +11,3 @@
 
 
 mappings:
-
-### github
-- hosts:
-    - github.com
-  sni: octocaptcha.com
-  address: 140.82.114.3:443
-
-- hosts:
-    - github.githubassets.com
-    - "*.githubusercontent.com"
-  sni: yelp.com
-  address: 199.232.240.116:443

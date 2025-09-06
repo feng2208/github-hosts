@@ -16,7 +16,7 @@ mappings:
 - hosts:
     - github.com
   sni: octocaptcha.com
-  address: 140.82.116.4:443
+  address: 140.82.114.3:443
 
 - hosts:
     - github.githubassets.com

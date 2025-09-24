@@ -9,12 +9,12 @@
 ### 谷歌浏览器
 Windows
 ```bat
-"C:\Program Files\Google\Chrome\Application\chrome.exe" --host-rules="MAP github.com octocaptcha.com, MAP github.githubassets.com yelp.com, MAP *.githubusercontent.com yelp.com" --host-resolver-rules="MAP octocaptcha.com 140.82.114.3, MAP yelp.com 199.232.240.116"
+"C:\Program Files\Google\Chrome\Application\chrome.exe" --host-rules="MAP github.com octocaptcha.com, MAP github.githubassets.com yelp.com, MAP *.githubusercontent.com yelp.com" --host-resolver-rules="MAP octocaptcha.com 140.82.114.3, MAP yelp.com 146.75.48.116"
 ```
 
 macOS
 ```sh
-/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --host-rules="MAP github.com octocaptcha.com, MAP github.githubassets.com yelp.com, MAP *.githubusercontent.com yelp.com" --host-resolver-rules="MAP octocaptcha.com 140.82.114.3, MAP yelp.com 199.232.240.116"
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --host-rules="MAP github.com octocaptcha.com, MAP github.githubassets.com yelp.com, MAP *.githubusercontent.com yelp.com" --host-resolver-rules="MAP octocaptcha.com 140.82.114.3, MAP yelp.com 146.75.48.116"
 ```
 
 
@@ -22,5 +22,5 @@ macOS
 在浏览器`设置`-`系统和性能`将`启动增强`关闭。
 
 ```bat
-"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --host-rules="MAP github.com octocaptcha.com, MAP github.githubassets.com yelp.com, MAP *.githubusercontent.com yelp.com" --host-resolver-rules="MAP octocaptcha.com 140.82.114.3, MAP yelp.com 199.232.240.116"
+"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --host-rules="MAP github.com octocaptcha.com, MAP github.githubassets.com yelp.com, MAP *.githubusercontent.com yelp.com" --host-resolver-rules="MAP octocaptcha.com 140.82.114.3, MAP yelp.com 146.75.48.116"
 ```

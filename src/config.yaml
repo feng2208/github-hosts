@@ -7,7 +7,7 @@
 #     - "*.example.com" # 所有子域名
 #   sni: sni.example.com
 #   address: 100.1.1.1:443
-# sni 和 hosts 都会用来验证服务器证书，如果 sni 以下划线开头(如：_example.com)，则 sni 不会被发送。
+# sni 用来验证服务器证书，如果以下划线开头(如：_example.com)，不会被发送。
 
 
 mappings: {}

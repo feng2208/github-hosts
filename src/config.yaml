@@ -10,4 +10,4 @@
 # sni 和 hosts 都会用来验证服务器证书，如果 sni 以下划线开头(如：_example.com)，则 sni 不会被发送。
 
 
-mappings:
+mappings: {}

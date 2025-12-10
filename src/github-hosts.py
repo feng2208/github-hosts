@@ -39,11 +39,8 @@ def verify_callback(conn, cert, error_n, error_depth, return_code) -> bool:
         crypto_cert = cert.to_cryptography()
         ext = crypto_cert.extensions.get_extension_for_class(x509.SubjectAlternativeName)
         dns_names = ext.value.get_values_for_type(x509.DNSName)
-        if conn.verify_host1 not in dns_names and conn.verify_host2 not in dns_names:
-            n_host1 = re.sub(r'^\w+\.', '*.', conn.verify_host1)
-            n_host2 = re.sub(r'^\w+\.', '*.', conn.verify_host2)
-            if n_host1 not in dns_names and n_host2 not in dns_names:
-                return False
+        if conn.conn_sni not in dns_names and re.sub(r'^\w+\.', '*.', conn.conn_sni) not in dns_names:
+            return False
     return True
 
 
@@ -111,19 +108,12 @@ class GithubHosts(TlsConfig):
                 data.context.server.address = mapping.address
                 logging.info(f"xxxxxxxx-tls-server-address: {mapping.address}")
 
-        else:
-            s_host = data.context.server.address[0]
-            s_port = data.context.server.address[1]
-            c_port = data.context.client.peername[1]
-            logging.info(f"{c_port} {s_host}:{s_port}")
-
     def tls_start_server(self, tls_start: tls.TlsData) -> None:
         super().tls_start_server(tls_start)
-        tls_start.ssl_conn.verify_host1 = tls_start.conn.sni
-        tls_start.ssl_conn.verify_host2 = tls_start.context.client.sni
+        tls_start.ssl_conn.conn_sni = tls_start.conn.sni
         if tls_start.conn.sni.startswith("_"):
             tls_start.ssl_conn.set_tlsext_host_name(b"")
-            tls_start.ssl_conn.verify_host1 = tls_start.conn.sni[1:]
+            tls_start.ssl_conn.conn_sni = tls_start.conn.sni[1:]
         tls_start.ssl_conn.set_verify(SSL.VERIFY_PEER, verify_callback)
         
     def _load_github_hosts(self) -> None:

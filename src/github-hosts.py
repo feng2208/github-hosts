@@ -1,5 +1,5 @@
 # https://github.com/feng2208/github-hosts
-# mitmdump -s src/github-hosts.py -p 8180 
+# mitmdump -s src/github-hosts.py --set flow_detail=0 -p 8180
 
 
 import logging

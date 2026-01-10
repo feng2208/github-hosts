@@ -11,10 +11,10 @@
 
 Windows
 ```bat
-"C:\Program Files\Google\Chrome\Application\chrome.exe" --host-rules="MAP github.com octocaptcha.com, MAP github.githubassets.com yelp.com, MAP *.githubusercontent.com yelp.com" --host-resolver-rules="MAP octocaptcha.com 20.200.245.247, MAP yelp.com 146.75.48.116"
+"C:\Program Files\Google\Chrome\Application\chrome.exe" --host-rules="MAP github.com octocaptcha.com, MAP github.githubassets.com www.yelp.com, MAP *.githubusercontent.com www.yelp.com"
 ```
 
 macOS
 ```sh
-/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --host-rules="MAP github.com octocaptcha.com, MAP github.githubassets.com yelp.com, MAP *.githubusercontent.com yelp.com" --host-resolver-rules="MAP octocaptcha.com 20.200.245.247, MAP yelp.com 146.75.48.116"
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --host-rules="MAP github.com octocaptcha.com, MAP github.githubassets.com www.yelp.com, MAP *.githubusercontent.com www.yelp.com"
 ```

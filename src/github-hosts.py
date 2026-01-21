@@ -4,6 +4,9 @@
 
 import logging
 from dataclasses import dataclass
+import json
+from mitmproxy.http import HTTPFlow
+from mitmproxy.http import Response
 
 from mitmproxy.addonmanager import Loader
 from mitmproxy import tls
@@ -22,6 +25,31 @@ import os
 SRC_DIR = os.path.dirname(os.path.realpath(__file__))
 CONFIG_FILE = SRC_DIR + "/config.yaml"
 
+# pac
+HOST_LIST = []
+
+
+def generate_pac_content(domains, proxy_server):
+    """
+    构造 PAC 文件的 JavaScript 内容。
+    使用 shExpMatch 函数来处理通配符匹配。
+    """
+    # 将 Python 列表转换为 JSON 格式的字符串，以便在 JS 中作为数组使用
+    domains_json = json.dumps(domains, indent=8)
+
+    js_content = f"""
+function FindProxyForURL(url, host) {{
+    var rules = {domains_json};
+    var proxy = "{proxy_server}";
+    for (var i = 0; i < rules.length; i++) {{
+        if (shExpMatch(host, rules[i])) {{
+            return proxy;
+        }}
+    }}
+    return "DIRECT";
+}}
+"""
+    return js_content
 
 def verify_callback(conn, cert, error_n, error_depth, return_code) -> bool:
     if return_code == 1:
@@ -93,6 +121,18 @@ class GithubHosts(TlsConfig):
             help="Generic TCP SSL proxy mode for all hosts that match the pattern",
         )
 
+    def requestheaders(self, flow: HTTPFlow) -> None:
+        flow.request.stream = True
+        if flow.request.path == "/proxy.pac":
+            proxy_server = f"PROXY {flow.request.host_header}"
+            pac_content = generate_pac_content(HOST_LIST, proxy_server)
+            flow.response = Response.make(
+                200,
+                pac_content,
+                {"Content-Type": "application/x-ns-proxy-autoconfig"}
+            )
+            logging.info(f"Served PAC to {flow.client_conn.peername}")
+
     def tls_clienthello(self, data: tls.ClientHelloData) -> None:
         data.ignore_connection = True
         host = data.context.client.sni
@@ -132,6 +172,7 @@ class GithubHosts(TlsConfig):
                         address=address,
                    )
             for host in mapping["hosts"]:
+                HOST_LIST.append(host)
                 if host.startswith("*."):
                     star_mappings[host[2:]] = item
                     if sni is not None:

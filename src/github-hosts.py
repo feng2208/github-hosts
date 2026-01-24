@@ -134,10 +134,9 @@ class GithubHosts(TlsConfig):
             )
             logging.info(f"Served PAC to {flow.client_conn.peername}")
         
-        elif hasattr(flow.server_conn, "cf"):
+        elif hasattr(flow.client_conn, "cf"):
             flow.request.headers['rhost'] = flow.request.host_header
-            flow.request.headers['host'] = flow.server_conn.cf.removeprefix('_')
-            flow.server_conn.sni = flow.server_conn.cf
+            flow.request.host = flow.client_conn.cf.removeprefix('_').split('_')[-1]
 
     def responseheaders(self, flow: HTTPFlow) -> None:
         flow.response.stream = True
@@ -151,24 +150,39 @@ class GithubHosts(TlsConfig):
             logging.info(f"xxxxxxxx-tls-server-host: {host}")
             if mapping.sni is not None:
                 data.ignore_connection = False
-                data.context.server.sni = mapping.sni
+                data.context.client.server_sni = mapping.sni
                 logging.info(f"xxxxxxxx-tls-server-sni: {mapping.sni}")
             if mapping.cf is not None:
                 data.ignore_connection = False
-                data.context.server.cf = mapping.cf
+                data.context.client.cf = mapping.cf
                 logging.info(f"xxxxxxxx-tls-server-cf: {mapping.cf}")
             if mapping.address is not None:
-                data.context.server.address = mapping.address
+                data.context.client.server_address = mapping.address
                 logging.info(f"xxxxxxxx-tls-server-address: {mapping.address}")
+
+    def server_connect(self, data: ServerConnectionHookData) -> None:
+        if hasattr(data.client, "server_address"):
+            data.server.address = data.client.server_address
+        if hasattr(data.client, "server_sni"):
+            data.server.sni = data.client.server_sni
+        if hasattr(data.client, "cf"):
+            data.server.cf = data.client.cf
 
     def tls_start_server(self, tls_start: tls.TlsData) -> None:
         super().tls_start_server(tls_start)
-        tls_start.ssl_conn.conn_sni = tls_start.conn.sni
-        if tls_start.conn.sni.startswith("_"):
-            tls_start.ssl_conn.set_tlsext_host_name(b"")
-            tls_start.ssl_conn.conn_sni = tls_start.conn.sni[1:]
-        tls_start.ssl_conn.set_verify(SSL.VERIFY_PEER, verify_callback)
-        
+        if hasattr(tls_start.conn, "cf"):
+            tls_start.conn.sni = tls_start.conn.cf
+        if '_' in tls_start.conn.sni:
+            if tls_start.conn.sni.startswith("_"):
+                sni = b""
+                verify_host = tls_start.conn.sni[1:]
+            else:
+                _sni, sep, verify_host = tls_start.conn.sni.partition('_')
+                sni = _sni.encode('utf-8')
+            tls_start.ssl_conn.set_tlsext_host_name(sni)
+            tls_start.ssl_conn.conn_sni = verify_host
+            tls_start.ssl_conn.set_verify(SSL.VERIFY_PEER, verify_callback)
+
     def _load_github_hosts(self) -> None:
         host_mappings: dict[str, Mapping] = {}
         star_mappings: dict[str, Mapping] = {}

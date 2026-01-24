@@ -76,6 +76,7 @@ def verify_callback(conn, cert, error_n, error_depth, return_code) -> bool:
 class Mapping:
     sni: str
     address: tuple
+    cf: str
 
 class GithubHosts(TlsConfig):
     # configurations for regular ("example.com") mappings:
@@ -132,6 +133,14 @@ class GithubHosts(TlsConfig):
                 {"Content-Type": "application/x-ns-proxy-autoconfig"}
             )
             logging.info(f"Served PAC to {flow.client_conn.peername}")
+        
+        elif hasattr(flow.server_conn, "cf"):
+            flow.request.headers['rhost'] = flow.request.host_header
+            flow.request.headers['host'] = flow.server_conn.cf.removeprefix('_')
+            flow.server_conn.sni = flow.server_conn.cf
+
+    def responseheaders(self, flow: HTTPFlow) -> None:
+        flow.response.stream = True
 
     def tls_clienthello(self, data: tls.ClientHelloData) -> None:
         data.ignore_connection = True
@@ -144,6 +153,10 @@ class GithubHosts(TlsConfig):
                 data.ignore_connection = False
                 data.context.server.sni = mapping.sni
                 logging.info(f"xxxxxxxx-tls-server-sni: {mapping.sni}")
+            if mapping.cf is not None:
+                data.ignore_connection = False
+                data.context.server.cf = mapping.cf
+                logging.info(f"xxxxxxxx-tls-server-cf: {mapping.cf}")
             if mapping.address is not None:
                 data.context.server.address = mapping.address
                 logging.info(f"xxxxxxxx-tls-server-address: {mapping.address}")
@@ -164,12 +177,14 @@ class GithubHosts(TlsConfig):
         for mapping in self.yaml_config["mappings"]:
             address = mapping.get("address")
             sni = mapping.get("sni")
+            cf = mapping.get("cf")
             if address is not None:
                 address = (address.split(':')[0], int(address.split(':')[1]))
 
             item = Mapping(
                         sni=sni,
                         address=address,
+                        cf=cf,
                    )
             for host in mapping["hosts"]:
                 HOST_LIST.append(host)

@@ -6,6 +6,7 @@
 #     - example.com
 #     - "*.example.com" # 所有子域名
 #   sni: sni.example.com
+#   cf: cf-host
 #   address: 100.1.1.1:443
 # sni 用来验证服务器证书，如果以下划线开头(如：_example.com)，不会被发送。
 
